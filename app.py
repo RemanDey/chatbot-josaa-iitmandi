@@ -22,7 +22,7 @@ app = Flask(__name__)
 # QWEN_API_URL = os.environ.get("QWEN_API_URL")
 # QWEN_API_KEY = os.environ.get("QWEN_API_KEY")
 # QWEN_MODEL = os.environ.get("QWEN_MODEL", "qwen-b-hypertuned")
-client=genai.Client(api_key="AIzaSyCRMNGrVynxm-wsp39EFWriOXV6IGJpk7E")
+client=genai.Client(api_key=os.environ.get("API"))
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
     """Handles the initial handshake validation from Meta."""
