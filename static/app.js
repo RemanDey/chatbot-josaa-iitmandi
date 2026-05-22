@@ -7,7 +7,7 @@ const historySidebar = document.getElementById("history-sidebar");
 const menuToggle = document.getElementById("menu-toggle");
 const sidebar = document.getElementById("sidebar");
 
-const STORAGE_KEY = "gemini-conversations";
+const STORAGE_KEY = "josaa-conversations";
 let conversationHistory = [];
 let conversations = [];
 let currentConvId = null;
@@ -51,17 +51,23 @@ function autoResizeTextarea() {
 
 chatInput.addEventListener("input", autoResizeTextarea);
 
-function addMessageToUI(text, isUser = true) {
+function addMessageToUI(text, isUser = true, usePre = false, extraClass = "") {
     const messageDiv = document.createElement("div");
-    messageDiv.className = `message ${isUser ? "user" : "assistant"}`;
+    messageDiv.className = `message ${isUser ? "user" : "assistant"}${extraClass ? ` ${extraClass}` : ""}`;
 
     const avatar = document.createElement("div");
     avatar.className = "message-avatar";
-    avatar.textContent = isUser ? "U" : "G";
+    avatar.textContent = isUser ? "U" : "J";
 
     const content = document.createElement("div");
     content.className = "message-content";
-    content.textContent = text;
+    if (usePre) {
+        const pre = document.createElement("pre");
+        pre.textContent = text;
+        content.appendChild(pre);
+    } else {
+        content.textContent = text;
+    }
 
     messageDiv.appendChild(avatar);
     messageDiv.appendChild(content);
@@ -73,6 +79,65 @@ function addMessageToUI(text, isUser = true) {
 function clearGreeting() {
     const greeting = chatMessages.querySelector(".greeting-panel");
     if (greeting) greeting.remove();
+}
+
+function typeChars(span, text, speed = 35) {
+    return new Promise((resolve) => {
+        let i = 0;
+        const t = setInterval(() => {
+            if (i < text.length) {
+                span.textContent += text.charAt(i);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                i += 1;
+            } else {
+                clearInterval(t);
+                resolve();
+            }
+        }, speed);
+    });
+}
+
+async function typeSegmentsOnPre(pre, lines, speed = 35, lineDelay = 140) {
+    for (const line of lines) {
+        for (const seg of line) {
+            const span = document.createElement('span');
+            if (seg.cls) span.className = seg.cls;
+            pre.appendChild(span);
+            // type the segment text char-by-char
+            // small tweak: treat whitespace at start as part of text
+            await typeChars(span, seg.text, speed);
+        }
+        // append line break
+        pre.appendChild(document.createElement('br'));
+        await new Promise(r => setTimeout(r, lineDelay));
+    }
+}
+
+function renderInitialBootSequence() {
+    const lines = [
+        [ { text: '>', cls: 'tok-prompt' }, { text: ' Initializing ', cls: 'tok-action' }, { text: 'IIT Mandi Gateway', cls: 'tok-variable' }, { text: '...', cls: '' } ],
+        [ { text: '>', cls: 'tok-prompt' }, { text: ' Fetching latest JoSAA seat matrix... ', cls: '' }, { text: ' [SUCCESS]', cls: 'tok-status' } ],
+        [ { text: '>', cls: 'tok-prompt' }, { text: ' Loading historical closing rank datasets... ', cls: '' }, { text: ' [OK]', cls: 'tok-status' } ],
+        [ { text: '>', cls: 'tok-prompt' }, { text: ' System ready. Awaiting user input...', cls: '' } ]
+    ];
+
+    const messageDiv = document.createElement("div");
+        messageDiv.className = "message terminal system";
+
+
+    const content = document.createElement("div");
+    content.className = "message-content";
+
+    const pre = document.createElement("pre");
+    pre.className = 'terminal-pre';
+    content.appendChild(pre);
+
+    messageDiv.appendChild(content);
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // start async typing (don't block)
+    typeSegmentsOnPre(pre, lines, 28, 120).catch(console.error);
 }
 
 async function sendMessage(text) {
@@ -185,6 +250,7 @@ function startNewChat() {
     conversationHistory = [];
     currentConvId = null;
     chatMessages.innerHTML = '<div class="greeting-panel"><h2>Hello. How can I help you today?</h2></div>';
+    renderInitialBootSequence();
     chatInput.value = "";
     chatInput.style.height = "auto";
     

@@ -247,6 +247,55 @@ body {
     border-radius: 4px 24px 24px 24px;
 }
 
+.message.assistant.terminal .message-content {
+    background: #1e1e2e;
+    border: 1px solid #44475a;
+    color: #f8f8f2;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    white-space: pre-wrap;
+    padding: 14px 18px;
+    border-radius: 18px 24px 24px 24px;
+    box-shadow: inset 0 0 12px rgba(68, 71, 90, 0.06);
+}
+
+.message.assistant.terminal .message-content::before {
+    content: " ";
+    display: block;
+    margin-bottom: 6px;
+    height: 1px;
+    background: rgba(68, 71, 90, 0.12);
+}
+
+.message.assistant.terminal .message-content pre {
+    margin: 0;
+    font-family: inherit;
+    line-height: 1.55;
+    color: #f8f8f2;
+}
+
+/* Token colors (synth-wave / Monokai-inspired) */
+.message.assistant.terminal .tok-prompt { color: #ff79c6; }
+.message.assistant.terminal .tok-action { color: #8be9fd; }
+.message.assistant.terminal .tok-variable { color: #50fa7b; }
+.message.assistant.terminal .tok-status { color: #ffb86c; }
+
+.message.assistant.terminal .terminal-line { display: block; }
+
+/* Centered system terminal message */
+.message.terminal {
+    align-self: center;
+    justify-content: center;
+}
+
+.message.terminal .message-avatar {
+    display: none;
+}
+
+.message.terminal .message-content {
+    margin: 0 auto;
+    max-width: 760px;
+}
+
 .message-avatar {
     width: 32px;
     height: 32px;
