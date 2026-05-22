@@ -77,11 +77,14 @@ def receive_message():
 
 def generate_ai_response(prompt):
     """Sends the user's message to an LLM for processing and returns the reply."""
-    response=client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt,
-    )
-    return response.text
+    if prompt=="ps":
+        return "Reman Loves To Solve PS:)hehe"
+    else:
+        response=client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        return response.text
 
 @app.route("/app", methods=["POST"])
 def web_app_response():
