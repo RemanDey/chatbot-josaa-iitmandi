@@ -79,7 +79,7 @@ def generate_ai_response(prompt):
     """Sends the user's message to an LLM for processing and returns the reply."""
     if prompt=="ps":
         return "Reman Loves To Solve PS:)hehe"
-    else if "reman" in prompt.lower():
+    elif "reman" in prompt.lower():
         return "Reman Dey is My Creator!!!MY GODDDDDDDDDDD!!! visit his god damn portfolio at remandey.github.io/my-portfolio . ANd he is too fond of solving his PS :)"
     else:
         response=client.models.generate_content(
