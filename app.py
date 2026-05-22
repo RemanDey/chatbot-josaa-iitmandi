@@ -91,7 +91,7 @@ def web_app_response():
     if not prompt:
         return jsonify({"error": "Missing prompt."}), 400
     #FOR DEBUGGING
-    print(prompt)
+    #print(prompt)
     reply = generate_ai_response(prompt)
     return jsonify({"prompt": prompt, "reply": reply})
 
