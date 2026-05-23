@@ -11,7 +11,7 @@ load_dotenv()
 # VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 # PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 # ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
-AI_BACKEND_URL = os.getenv("AI_BACKEND_URL", "http://127.0.0.1:8000/api/chat")
+AI_BACKEND_URL ="https://chatbot-josaa-backend-api.onrender.com/api/chat"
 
 app = Flask(__name__)
 
