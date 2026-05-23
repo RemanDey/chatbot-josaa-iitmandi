@@ -1,6 +1,6 @@
-# WhatsApp AI Chatbot
+# IIT MANDI JOSAA CHATBOT
 
-A Flask-based WhatsApp chatbot that forwards user text to an AI backend and returns replies using Meta's WhatsApp Business API.
+A Flask-based chatbot that forwards user text to an AI backend and returns replies using Meta's WhatsApp Business API.
 
 ## Features
 - Webhook endpoint for WhatsApp message events
