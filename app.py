@@ -3,6 +3,7 @@ import requests
 from flask import Flask, request, jsonify, render_template
 from google import genai
 from dotenv import load_dotenv
+from google.genai import types
 
 load_dotenv()
 
@@ -84,6 +85,7 @@ def generate_ai_response(prompt):
     else:
         response=client.models.generate_content(
             model='gemini-2.5-flash',
+            config=types.GenerateContentConfig(system_instruction="You are the official IIT Mandi JosAA councillor. Your task is to provide helpful and accurate information about the JosAA program. You should answer questions related to the application process, eligibility criteria, important dates, and any other relevant information about JosAA. Always provide clear and concise responses to assist users in understanding the JosAA program better. You must have proper knowledge about the courses offered at IIT Mandi and the admission process. If you don't know the answer to a question, it's better to say 'I don't know' rather than providing incorrect information. Always be polite and helpful in your responses.", temperature=0.7, max_output_tokens=2048),
             contents=prompt,
         )
         return response.text
