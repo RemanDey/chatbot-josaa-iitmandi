@@ -1,0 +1,19 @@
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+pydantic-settings>=2.9.0
+
+# Vector database
+chromadb>=0.6.0
+
+# Local embeddings (free, no API key)
+sentence-transformers>=3.0.0
+
+# HTTP client (Ollama API calls)
+httpx>=0.28.0
+
+# Data processing (ingestion script)
+tqdm>=4.67.0
+
+# Environment variables
+python-dotenv>=1.0.0
