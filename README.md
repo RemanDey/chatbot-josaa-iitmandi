@@ -44,6 +44,10 @@ PHONE_NUMBER_ID=your_whatsapp_phone_number_id
 ACCESS_TOKEN=your_meta_graph_api_access_token
 AI_BACKEND_URL=http://127.0.0.1:8000/api/chat
 PORT=5000
+
+# Optional / Integration variables
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+HOISTED_FRONTEND_URL=https://your-frontend.example.com/
 ```
 
 ## Local Development
@@ -55,6 +59,13 @@ python app.py
 ```
 
 The app will listen on `http://0.0.0.0:5000` by default.
+
+### Notes for development
+
+- Keep secrets out of source control. Use a `.env` file locally and set real
+   secrets in your cloud provider's environment variables when deploying.
+- If you modify `app.py`, run the app in a dedicated virtual environment to
+   avoid dependency conflicts.
 
 ## Production Deployment
 
@@ -73,6 +84,33 @@ gunicorn --bind 0.0.0.0:$PORT app:app
 ```
 
 Set the same environment variables in the Render dashboard.
+
+## Security & Operational Notes
+
+- Validate webhook requests:
+   - For Twilio: validate the Twilio signature on incoming requests.
+   - For Telegram: limit the webhook endpoint to Telegram IP ranges or verify
+      requests when possible.
+- Use TLS/HTTPS in production and configure your WAF or reverse proxy to
+   handle TLS termination.
+- Monitor logs and configure health checks for the AI backend service.
+
+## Integration Points
+
+- WhatsApp (Meta): The webhook handler expects to receive messages via Twilio
+   or your chosen WhatsApp integration. Ensure your `ACCESS_TOKEN` and
+   `PHONE_NUMBER_ID` are set and valid.
+- Telegram: If you enable Telegram handling, set `TELEGRAM_BOT_TOKEN` and
+   configure your bot's webhook to point to `https://<your-host>/telegram`.
+
+## Troubleshooting
+
+- "AI backend unavailable": check that `AI_BACKEND_URL` is configured and the
+   backend is reachable from the host running this app.
+- Webhook not triggering: confirm external webhook URL is reachable and your
+   platform (Twilio/Meta/Telegram) is configured with the correct callback.
+- 500-level errors: inspect the container logs for tracebacks and enable
+   DEBUG only in local development.
 
 ## Debugging and Troubleshooting
 
