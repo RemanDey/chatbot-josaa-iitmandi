@@ -1,4 +1,5 @@
 import os
+i
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from dotenv import load_dotenv
 import requests
@@ -188,15 +189,15 @@ def generate_ai_response(prompt):
         return (
             "Reman Dey is My Creator!!!MY GODDDDDDDDDDD!!! "
             "visit his portfolio at remandey.github.io/my-portfolio . "
-            "ANd he is too fond of solving his PS :)"
         )
 
     payload = {"query": prompt}
 
 
     response = requests.post(AI_BACKEND_URL, json=payload)
+    processessed_reply = format_ai_response(response)
+    return processessed_reply
 
-    return response.text
 def format_ai_response(raw_response):
     """Format the raw AI response for better readability.
 
@@ -204,8 +205,9 @@ def format_ai_response(raw_response):
     AI's output before sending it back to users. For example, you could add
     markdown formatting, handle special tokens, or truncate long responses.
     """
-    
-    return raw_response
+    data = raw_response.json()
+    processed_response = data["answer"]
+    return processed_response
 
 
 @app.route("/app", methods=["POST"])
