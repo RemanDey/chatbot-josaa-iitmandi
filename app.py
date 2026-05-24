@@ -197,7 +197,15 @@ def generate_ai_response(prompt):
     response = requests.post(AI_BACKEND_URL, json=payload)
 
     return response.text
+def format_ai_response(raw_response):
+    """Format the raw AI response for better readability.
 
+    This is a placeholder for any post-processing you might want to do on the
+    AI's output before sending it back to users. For example, you could add
+    markdown formatting, handle special tokens, or truncate long responses.
+    """
+    
+    return raw_response
 
 
 @app.route("/app", methods=["POST"])

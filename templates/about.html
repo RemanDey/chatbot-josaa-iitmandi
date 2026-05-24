@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About · JoSAAssist IIT-Mandi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:        #050a12;
+      --surface:   rgba(10, 20, 38, 0.72);
+      --border:    rgba(0, 210, 255, 0.18);
+      --accent:    #00d2ff;
+      --accent2:   #a855f7;
+      --glow:      0 0 18px rgba(0, 210, 255, 0.45);
+      --glow2:     0 0 18px rgba(168, 85, 247, 0.45);
+      --text:      #d0e8f5;
+      --muted:     #5a7a96;
+      --radius:    14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 17px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── CANVAS BACKGROUND ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── SCANLINE OVERLAY ── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0, 0, 0, 0.06) 3px,
+        rgba(0, 0, 0, 0.06) 4px
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ── LAYOUT ── */
+    main {
+      position: relative;
+      z-index: 2;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 80px 28px 120px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 80px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      padding: 5px 16px;
+      border-radius: 20px;
+      margin-bottom: 28px;
+      box-shadow: var(--glow);
+      animation: fadeSlideDown 0.7s ease both;
+    }
+
+    .hero-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 6vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      color: #fff;
+      margin-bottom: 20px;
+      animation: fadeSlideDown 0.8s 0.1s ease both;
+    }
+
+    .hero-title span {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      animation: fadeSlideDown 0.9s 0.2s ease both;
+    }
+
+    /* typewriter cursor blink */
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--accent);
+      margin-left: 3px;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+
+    /* ── SECTION CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease, box-shadow 0.3s;
+    }
+
+    .card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .card:hover {
+      box-shadow: 0 6px 60px rgba(0, 210, 255, 0.12);
+    }
+
+    .card-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    .card h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 14px;
+    }
+
+    .card p {
+      line-height: 1.75;
+      color: var(--text);
+    }
+
+    /* ── CREATOR CARDS ── */
+    .creators-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 600px) {
+      .creators-grid { grid-template-columns: 1fr; }
+    }
+
+    .creator-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.3s, box-shadow 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .creator-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .creator-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .creator-card.primary::before {
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .creator-card.secondary::before {
+      background: linear-gradient(90deg, var(--accent2), transparent);
+    }
+
+    .creator-card:hover {
+      border-color: rgba(0, 210, 255, 0.4);
+      box-shadow: 0 6px 60px rgba(0, 210, 255, 0.15);
+    }
+
+    .creator-card.secondary:hover {
+      border-color: rgba(168, 85, 247, 0.4);
+      box-shadow: 0 6px 60px rgba(168, 85, 247, 0.15);
+    }
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 900;
+      margin-bottom: 18px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* show initials via pseudo-element when image fails */
+    .avatar[data-initials]::after {
+      content: attr(data-initials);
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 900;
+    }
+
+    .avatar.primary[data-initials]::after { color: var(--accent); }
+    .avatar.secondary[data-initials]::after { color: var(--accent2); }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .avatar.primary {
+      background: linear-gradient(135deg, rgba(0,210,255,0.2), rgba(0,210,255,0.05));
+      border: 1.5px solid var(--accent);
+      color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    .avatar.secondary {
+      background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.05));
+      border: 1.5px solid var(--accent2);
+      color: var(--accent2);
+      box-shadow: var(--glow2);
+    }
+
+    .creator-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .creator-role {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .creator-role.primary { color: var(--accent); }
+    .creator-role.secondary { color: var(--accent2); }
+
+    .creator-desc {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #8aacbf;
+    }
+
+    /* ── TECH STACK ── */
+    .tech-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .tech-tag {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      background: rgba(0, 210, 255, 0.07);
+      border: 1px solid rgba(0, 210, 255, 0.22);
+      color: var(--accent);
+      letter-spacing: 0.5px;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .tech-tag:hover {
+      background: rgba(0, 210, 255, 0.16);
+      box-shadow: var(--glow);
+    }
+
+    /* ── PIPELINE STEPS ── */
+    .pipeline {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .pipe-step {
+      display: flex;
+      gap: 20px;
+      position: relative;
+    }
+
+    .pipe-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 17px;
+      top: 36px;
+      bottom: -14px;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+    }
+
+    .pipe-dot {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0, 210, 255, 0.08);
+      border: 1.5px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    .pipe-content {
+      padding: 6px 0 28px;
+    }
+
+    .pipe-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .pipe-desc {
+      font-size: 14px;
+      color: #7a9ab2;
+      line-height: 1.6;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 30px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 2px;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-shadow: var(--glow); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    @keyframes fadeSlideDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 36px;
+      background: rgba(5, 10, 18, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: var(--glow);
+    }
+
+    .nav-link {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">JoSAAssist · IIT-Mandi</span>
+  <a href="/" class="nav-link">← Back to App</a>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1 class="hero-title">
+      <span id="typewriter-title"></span><span class="cursor"></span>
+    </h1>
+    <p class="hero-subtitle" id="typewriter-sub"></p>
+  </div>
+
+  <!-- WHAT IS IT -->
+  <div class="card" data-delay="0">
+    <div class="card-label">// overview</div>
+    <h2>What is JoSAAssist?</h2>
+    <p>
+      JoSAAssist is an AI-powered conversational assistant built specifically for students navigating the
+      JoSAA (Joint Seat Allocation Authority) counselling process at IIT Mandi. It provides instant, accurate
+      answers about seat allocation, eligibility criteria, branch preferences, fee structures, and more —
+      available as a web app, on WhatsApp, and on Telegram.
+    </p>
+  </div>
+
+  <!-- CREATORS -->
+  <div class="card-label" style="position:relative;z-index:2;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);">// the creators</div>
+  <div class="creators-grid">
+
+    <!-- Reman -->
+    <div class="creator-card primary" data-delay="100">
+      <div class="avatar primary">
+        <img src="{{ url_for('static', filename='reman.jpeg') }}" alt="Reman Dey" onerror="this.style.display='none';this.parentElement.setAttribute('data-initials','RD')" />
+      </div>
+      <div class="creator-name">Reman Dey</div>
+      <div class="creator-role primary">Frontend Engineer · App Architect</div>
+      <p class="creator-desc">
+        Engineered the entire user-facing product from scratch — the chat web application,
+        the WhatsApp messaging pipeline via Twilio, and the Telegram bot pipeline using the
+        Telegram Bot API. Built the full backend server with Python 3 and Flask, integrating
+        all communication channels into a single, cohesive system.
+      </p>
+    </div>
+
+    <!-- Aryan -->
+    <div class="creator-card secondary" data-delay="200">
+      <div class="avatar secondary">
+        <img src="{{ url_for('static', filename='aryan.jpeg') }}" alt="Aryan Raj" onerror="this.style.display='none';this.parentElement.setAttribute('data-initials','AR')" />
+      </div>
+      <div class="creator-name">Aryan Raj</div>
+      <div class="creator-role secondary">AI Engineer · Model Trainer</div>
+      <p class="creator-desc">
+        Responsible for training and fine-tuning the language model that powers JoSAAssist's
+        responses. Curated the JoSAA-specific dataset, optimised model parameters for
+        counselling-domain accuracy, and ensured the model delivers reliable, contextually
+        relevant answers to student queries.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- TECH STACK -->
+  <div class="card" data-delay="300">
+    <div class="card-label">// tech stack</div>
+    <h2>Built With</h2>
+    <p>
+      The application backend is written entirely in <strong style="color:#fff">Python 3</strong>, orchestrated through a
+      <strong style="color:#fff">Flask</strong> web server that handles routing, webhook processing, and API integrations.
+      External communication is powered by <strong style="color:#fff">Twilio</strong> for WhatsApp messaging,
+      the <strong style="color:#fff">Telegram Bot API</strong> for the Telegram channel, and the
+      <strong style="color:#fff">requests</strong> library for all outbound HTTP calls.
+    </p>
+    <p style="margin-top:14px;">
+      At its core, JoSAAssist runs a <strong style="color:#fff">Retrieval-Augmented Generation (RAG)</strong> pipeline.
+      Responses are generated via <strong style="color:#fff">Groq</strong> — delivering ultra-fast LLM inference —
+      with <strong style="color:#fff">OpenRouter</strong> serving as an automatic fallback when Groq is unavailable,
+      ensuring the assistant stays online around the clock. The knowledge base powering the retrieval layer is built
+      from two rich sources: <strong style="color:#fff">real WhatsApp group conversations</strong> from JoSAA
+      counselling seasons, and <strong style="color:#fff">official JoSAA documents</strong> including brochures,
+      schedules, and seat-matrix data — giving the model deeply grounded, real-world context.
+    </p>
+    <div class="tech-grid">
+      <span class="tech-tag">Python 3</span>
+      <span class="tech-tag">Flask</span>
+      <span class="tech-tag">Twilio API</span>
+      <span class="tech-tag">Telegram Bot API</span>
+      <span class="tech-tag">requests</span>
+      <span class="tech-tag">RAG Pipeline</span>
+      <span class="tech-tag">Groq</span>
+      <span class="tech-tag">OpenRouter</span>
+      <span class="tech-tag">WhatsApp Chats</span>
+      <span class="tech-tag">Official JoSAA Docs</span>
+      <span class="tech-tag">Render.com</span>
+      <span class="tech-tag">REST Webhooks</span>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="card" data-delay="400">
+    <div class="card-label">// architecture</div>
+    <h2>How It Works</h2>
+    <div class="pipeline">
+
+      <div class="pipe-step">
+        <div class="pipe-dot">01</div>
+        <div class="pipe-content">
+          <div class="pipe-title">User Sends a Message</div>
+          <div class="pipe-desc">
+            The user interacts via the web chat UI, WhatsApp, or Telegram. Each channel
+            has its own intake webhook registered on the Flask server.
+          </div>
+        </div>
+      </div>
+
+      <div class="pipe-step">
+        <div class="pipe-dot">02</div>
+        <div class="pipe-content">
+          <div class="pipe-title">Flask Routes the Request</div>
+          <div class="pipe-desc">
+            The Flask backend receives the incoming webhook, parses the message payload,
+            and identifies the channel of origin. Twilio handles WhatsApp; the Telegram Bot API
+            handles Telegram; native JS fetch handles the web UI.
+          </div>
+        </div>
+      </div>
+
+      <div class="pipe-step">
+        <div class="pipe-dot">03</div>
+        <div class="pipe-content">
+          <div class="pipe-title">RAG — Retrieval from Knowledge Base</div>
+          <div class="pipe-desc">
+            The query enters the <strong style="color:#fff">RAG pipeline</strong>. Relevant context is retrieved
+            from a curated knowledge base built on two sources: <strong style="color:#fff">real WhatsApp group
+            conversations</strong> from past JoSAA counselling seasons (capturing authentic student doubts and
+            expert answers) and <strong style="color:#fff">official JoSAA documents</strong> such as brochures,
+            seat matrices, and schedules. The top matching chunks are assembled as context and passed to the LLM.
+          </div>
+        </div>
+      </div>
+
+      <div class="pipe-step">
+        <div class="pipe-dot">04</div>
+        <div class="pipe-content">
+          <div class="pipe-title">Groq Inference · OpenRouter Fallback</div>
+          <div class="pipe-desc">
+            The enriched prompt is sent to <strong style="color:#fff">Groq</strong> for blazing-fast LLM inference.
+            If Groq is rate-limited or unreachable, the system automatically reroutes to
+            <strong style="color:#fff">OpenRouter</strong> as a seamless fallback — keeping the assistant
+            responsive at all times without any interruption to the user.
+          </div>
+        </div>
+      </div>
+
+      <div class="pipe-step">
+        <div class="pipe-dot">05</div>
+        <div class="pipe-content">
+          <div class="pipe-title">Response Delivered to User</div>
+          <div class="pipe-desc">
+            The grounded, RAG-enhanced answer is dispatched back through the appropriate channel —
+            Twilio sends it to WhatsApp, the Telegram API delivers it to Telegram, and the web UI
+            renders it live with a typewriter effect.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- MISSION -->
+  <div class="card" data-delay="500">
+    <div class="card-label">// mission</div>
+    <h2>Why We Built This</h2>
+    <p>
+      JoSAA counselling is a high-stakes, time-sensitive process that leaves thousands of students overwhelmed
+      by complex rules and deadlines. We built JoSAAssist to democratise access to accurate guidance —
+      available instantly, on any platform, at any hour. No waiting, no jargon.
+      Just clear answers when it matters most.
+    </p>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2026 JoSAAssist IIT-Mandi &nbsp;·&nbsp; Reman Dey &amp; Aryan Raj &nbsp;·&nbsp;
+    <a href="/">chatbot-josaa-iitmandi.onrender.com</a>
+  </p>
+</footer>
+
+<!-- ─────────────── SCRIPTS ─────────────── -->
+<script>
+  /* ── CANVAS PARTICLE NETWORK ── */
+  (function () {
+    const canvas = document.getElementById('bg-canvas');
+    const ctx    = canvas.getContext('2d');
+    let W, H, particles;
+
+    const ACCENT  = '0, 210, 255';
+    const ACCENT2 = '168, 85, 247';
+    const COUNT   = 90;
+
+    function resize () {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+
+    function mkParticle () {
+      return {
+        x:  Math.random() * W,
+        y:  Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        r:  Math.random() * 1.8 + 0.4,
+        hue: Math.random() > 0.5 ? ACCENT : ACCENT2,
+      };
+    }
+
+    function init () {
+      resize();
+      particles = Array.from({ length: COUNT }, mkParticle);
+    }
+
+    function draw () {
+      ctx.clearRect(0, 0, W, H);
+
+      /* connection lines */
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const a = particles[i], b = particles[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            const alpha = (1 - dist / 120) * 0.25;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(${a.hue}, ${alpha})`;
+            ctx.lineWidth = 0.7;
+            ctx.stroke();
+          }
+        }
+      }
+
+      /* dots */
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.hue}, 0.7)`;
+        ctx.shadowColor = `rgba(${p.hue}, 0.9)`;
+        ctx.shadowBlur  = 6;
+        ctx.fill();
+        ctx.shadowBlur  = 0;
+
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > W) p.vx *= -1;
+        if (p.y < 0 || p.y > H) p.vy *= -1;
+      });
+
+      requestAnimationFrame(draw);
+    }
+
+    init();
+    draw();
+    window.addEventListener('resize', () => { resize(); });
+  })();
+
+  /* ── TYPEWRITER TITLE ── */
+  (function () {
+    const titleEl = document.getElementById('typewriter-title');
+    const subEl   = document.getElementById('typewriter-sub');
+
+    const titleText = 'JoSAAssist';
+    const subText   = 'IIT-Mandi // AI Counselling Assistant';
+
+    let i = 0;
+    function typeTitle () {
+      if (i < titleText.length) {
+        titleEl.textContent += titleText[i++];
+        setTimeout(typeTitle, 90);
+      } else {
+        setTimeout(typeSub, 300);
+      }
+    }
+
+    let j = 0;
+    function typeSub () {
+      if (j < subText.length) {
+        subEl.textContent += subText[j++];
+        setTimeout(typeSub, 38);
+      }
+    }
+
+    setTimeout(typeTitle, 600);
+  })();
+
+  /* ── SCROLL REVEAL ── */
+  (function () {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const delay = parseInt(e.target.dataset.delay || '0');
+          setTimeout(() => e.target.classList.add('visible'), delay);
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.card, .creator-card').forEach(el => obs.observe(el));
+  })();
+</script>
+
+</body>
+</html>
