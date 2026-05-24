@@ -25,11 +25,8 @@ def whatsapp_webhook():
     
     # 2. Optional Group Logic: Only reply if the bot is explicitly mentioned
     # (Since it's in a group, you don't want it replying to *every* sentence)
-    if "@bot" not in incoming_msg.lower():
-        return "", 200 # Ignore the message but return a clean success status
-
     # Clean the trigger word out of the prompt
-    cleaned_prompt = incoming_msg.lower().replace("@bot", "").strip()
+    cleaned_prompt = incoming_msg
 
     # 3. Get the AI's response
     ai_reply = f"AI Response to '{cleaned_prompt}'"  # Placeholder for actual AI response
