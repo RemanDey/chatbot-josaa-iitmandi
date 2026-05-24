@@ -11,9 +11,43 @@ load_dotenv()
 # VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 # PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 # ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+
 AI_BACKEND_URL = ""
 HOISTED_FRONTEND_URL = "https://chatbot-josaa-iitmandi.onrender.com/"
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 app = Flask(__name__)
+@app.route("/telegram", methods=["POST"])
+def telegram_webhook():
+    telegram_data = request.get_json()
+    
+    # Check if the incoming data contains a standard text message
+    if "message" in telegram_data and "text" in telegram_data["message"]:
+        chat_id = telegram_data["message"]["chat"]["id"]
+        incoming_text = telegram_data["message"]["text"]
+        
+        print(f"Received message: '{incoming_text}' from Chat ID: {chat_id}")
+        
+        # Trigger Condition: Only reply if the bot is tagged or mentioned by its handle
+        # Replace '@YourBotUsername' with your actual bot's username
+        if "@josaa_iitmandi_bot" in incoming_text:
+            cleaned_prompt = incoming_text.replace("@josaa_iitmandi_bot", "").strip()
+            
+            # Get AI generation
+            ai_reply =  f"Reman and Aryan's hehe  Response to '{cleaned_prompt}'"#get_ai_response(cleaned_prompt)
+            
+            # Payload to send back to Telegram
+            payload = {
+                "chat_id": chat_id,
+                "text": ai_reply,
+                # This replies directly to the user's specific bubble in the group
+                "reply_to_message_id": telegram_data["message"]["message_id"] 
+            }
+            
+            # Post the response back to Telegram's servers
+            requests.post(TELEGRAM_API_URL, json=payload)
+            
+    return "OK", 200
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp_webhook():
