@@ -1,5 +1,4 @@
 import os
-import logging
 from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 import requests
@@ -25,9 +24,6 @@ Security and production notes:
      (Meta webhook verify token / Telegram bot secure settings / Twilio auth).
 """
 
-# Initialize basic logging so container logs include useful information.
-logging.basicConfig(level=logging.INFO)
-
 # Load environment variables from a local .env file when developing locally.
 # In production, runtime environment should provide these values securely.
 load_dotenv()
@@ -36,7 +32,7 @@ load_dotenv()
 # - AI_BACKEND_URL: URL of the AI service used to generate responses. Required.
 # - HOISTED_FRONTEND_URL: Optional front-end location for links returned to users.
 # - BOT_TOKEN: Telegram bot token. Only required if using the Telegram webhook.
-AI_BACKEND_URL = os.getenv("AI_BACKEND_URL", "")
+AI_BACKEND_URL = "https://aryanraj1092-iitmandi-bot.hf.space/api/chat"
 HOISTED_FRONTEND_URL = os.getenv(
         "HOISTED_FRONTEND_URL", "https://chatbot-josaa-iitmandi.onrender.com/"
 )
@@ -60,18 +56,15 @@ def telegram_webhook():
 
     # Basic defensive checks to avoid KeyError on malformed payloads.
     if not telegram_data:
-        logging.debug("telegram_webhook: empty payload")
+      
         return "OK", 200
 
     message = telegram_data.get("message")
     if not message:
-        logging.debug("telegram_webhook: non-message update received")
         return "OK", 200
 
     chat_id = message.get("chat", {}).get("id")
     incoming_text = message.get("text", "")
-
-    logging.info("Received Telegram message from %s: %s", chat_id, incoming_text)
 
     # Trigger Condition: only reply if the bot is @-mentioned. This prevents
     # the bot from replying to every message in a group.
@@ -93,7 +86,7 @@ def telegram_webhook():
         try:
             requests.post(TELEGRAM_API_URL, json=payload, timeout=5)
         except Exception:
-            logging.exception("Failed to send reply to Telegram")
+            pass  # Log the exception in production for debugging
 
     return "OK", 200
 
@@ -148,20 +141,11 @@ def generate_ai_response(prompt):
             "ANd he is too fond of solving his PS :)"
         )
 
-    # In production ensure `AI_BACKEND_URL` is set. Failing early with a clear
-    # error message helps debugging in container logs.
-    if not AI_BACKEND_URL:
-        logging.error("AI_BACKEND_URL is not configured")
-        return "AI backend unavailable"
-
     payload = {"query": prompt}
-    try:
-        response = requests.post(AI_BACKEND_URL, json=payload, timeout=8)
-        response.raise_for_status()
-        return response.text
-    except requests.RequestException:
-        logging.exception("Error contacting AI backend")
-        return "Sorry, I couldn't get a response from the AI service."
+    
+    response = requests.post(AI_BACKEND_URL, json=payload)
+    return response.text
+
 
 
 @app.route("/app", methods=["POST"])
