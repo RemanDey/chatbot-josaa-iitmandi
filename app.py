@@ -29,7 +29,7 @@ def whatsapp_webhook():
     cleaned_prompt = incoming_msg
 
     # 3. Get the AI's response
-    ai_reply = f"AI Response to '{cleaned_prompt}'"  # Placeholder for actual AI response
+    ai_reply = f"Reman and Aryan's hehe  Response to '{cleaned_prompt}'"  # Placeholder for actual AI response
 
     # 4. Use Twilio's TwiML to send the response back
     twilio_response = MessagingResponse()
