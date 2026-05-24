@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Debug Login</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; }
+    .box { max-width: 420px; margin: 0 auto; }
+    input[type=password]{ width:100%; padding:8px; margin:8px 0 }
+    button{ padding:8px 16px }
+    .flash{ color: red }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Debug Login</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash">
+          {% for cat, msg in messages %}
+            <div>{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" />
+      <div>
+        <button type="submit">Sign in</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

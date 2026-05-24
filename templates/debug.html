@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Debug Console — JOSAA Chatbot</title>
+  <style>
+    :root{
+      --bg:#f5f7fb; --card:#ffffff; --muted:#6b7280; --accent:#0b71ea; --danger:#d9534f;
+      --maxw:900px; --radius:8px; --mono:Menlo, Monaco, Consolas, "Courier New", monospace;
+    }
+    html,body{height:100%}
+    body{
+      margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:linear-gradient(180deg, #eef2f7 0%, var(--bg) 100%); color:#111827; padding:24px;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .container{max-width:var(--maxw); margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    header h1{font-size:18px;margin:0}
+    header .meta{color:var(--muted);font-size:13px}
+
+    .card{background:var(--card); border-radius:var(--radius); box-shadow:0 6px 18px rgba(15,23,42,0.06); padding:18px}
+    label{display:block;margin-bottom:6px;font-weight:600}
+    textarea{width:100%;min-height:120px;padding:12px;border:1px solid #e6e9ef;border-radius:6px;font-size:14px}
+    .row{display:flex;gap:12px;margin-top:12px}
+    .row .col{flex:1}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+    .btn.secondary{background:#fff;color:var(--accent);border:1px solid #dbe7ff}
+    .btn.danger{background:var(--danger)}
+
+    .response{margin-top:18px}
+    pre{background:#0f1724;color:#e6eef8;padding:12px;border-radius:6px;overflow:auto;font-family:var(--mono);font-size:13px}
+    .meta-row{display:flex;gap:12px;font-size:13px;color:var(--muted);margin-top:8px}
+    .history{margin-top:12px;max-height:160px;overflow:auto;padding:8px;border-radius:6px;border:1px solid #eef2f7;background:#fcfdff}
+    .history-item{padding:8px;border-radius:6px;margin-bottom:6px;background:#fff;border:1px solid #eef2f7;cursor:pointer}
+    .small{font-size:13px;color:var(--muted)}
+
+    @media (max-width:640px){ .row{flex-direction:column} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>JOSAA Chatbot — Debug Console</h1>
+        <div class="meta">Send test prompts to the backend and inspect responses</div>
+      </div>
+      <div>
+        <a href="/debug/logout" class="small">Sign out</a>
+      </div>
+    </header>
+
+    <div class="card">
+      <div>
+        <label for="prompt">Prompt</label>
+        <textarea id="prompt" placeholder="Type a prompt to send to the backend">hello</textarea>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="col">
+          <button id="send" class="btn">Send</button>
+          <button id="clear" class="btn secondary">Clear</button>
+          <button id="copyCurl" class="btn secondary">Copy curl</button>
+        </div>
+        <div style="min-width:200px;text-align:right">
+          <div class="small">Endpoint: <strong>/app</strong></div>
+          <div class="small">Method: <strong>POST</strong></div>
+        </div>
+      </div>
+
+      <div class="response">
+        <div class="meta-row">
+          <div id="status" class="small">Status: —</div>
+          <div id="time" class="small">Time: —</div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <h4 style="margin:0 0 8px 0">Statistics</h4>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:320px">
+              <div class="card" style="padding:10px">
+                <div class="small">Requests: <strong id="stat-count">0</strong></div>
+                <div class="small">Average: <strong id="stat-avg">—</strong> ms</div>
+                <div class="small">Median: <strong id="stat-median">—</strong> ms</div>
+                <div class="small">Min: <strong id="stat-min">—</strong> ms</div>
+                <div class="small">Max: <strong id="stat-max">—</strong> ms</div>
+              </div>
+              <canvas id="chart" width="320" height="160" style="margin-top:12px"></canvas>
+            </div>
+
+            <div style="flex:1">
+              <h3 style="margin:0 0 8px 0">Response</h3>
+              <pre id="output">(no response yet)</pre>
+            </div>
+          </div>
+        </div>
+
+        <h4 style="margin-top:14px">History</h4>
+        <div id="history" class="history small"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const sendBtn = document.getElementById('send');
+    const clearBtn = document.getElementById('clear');
+    const copyCurl = document.getElementById('copyCurl');
+    const promptEl = document.getElementById('prompt');
+    const out = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+    const timeEl = document.getElementById('time');
+    const historyEl = document.getElementById('history');
+
+    function loadHistory(){
+      try{ return JSON.parse(localStorage.getItem('josaa_debug_history')||'[]'); }catch(e){ return []; }
+    }
+    function saveHistory(h){ localStorage.setItem('josaa_debug_history', JSON.stringify(h)); }
+
+    function computeStats(h){
+      const ms = h.map(i=>i.ms).filter(v=>typeof v==='number');
+      if(ms.length===0) return {count:0, avg:0, median:0, min:0, max:0};
+      const sorted = ms.slice().sort((a,b)=>a-b);
+      const sum = ms.reduce((s,x)=>s+x,0);
+      const avg = Math.round(sum / ms.length);
+      const median = (sorted.length%2===1) ? sorted[(sorted.length-1)/2] : Math.round((sorted[sorted.length/2 -1] + sorted[sorted.length/2])/2);
+      return {count: ms.length, avg, median, min: Math.min(...ms), max: Math.max(...ms)};
+    }
+
+    // Chart.js instance
+    let chart = null;
+    function updateChart(h){
+      const points = h.slice().map(i=>({x:new Date(i.ts), y: i.ms || 0}));
+      const labels = points.map(p=>new Date(p.x).toLocaleTimeString());
+      const data = points.map(p=>p.y);
+      const ctx = document.getElementById('chart').getContext('2d');
+      if(chart) { chart.data.labels = labels; chart.data.datasets[0].data = data; chart.update(); return; }
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Response time (ms)', data, borderColor:'#0b71ea', backgroundColor:'rgba(11,113,234,0.08)', tension:0.25 }] },
+        options: { scales: { x:{ display:false }, y:{ beginAtZero:true } }, plugins:{ legend:{ display:false } } }
+      });
+    }
+
+    function renderHistory(){
+      const h = loadHistory();
+      historyEl.innerHTML = h.slice().reverse().map(item=>{
+        const time = new Date(item.ts).toLocaleString();
+        return `<div class="history-item" data-p="${encodeURIComponent(item.prompt)}"><strong>${item.prompt.slice(0,80)}</strong><div class="small">${time} — ${item.status}</div></div>`
+      }).join('') || '<div class="small">(no history)</div>';
+      Array.from(historyEl.querySelectorAll('.history-item')).forEach(el=>{
+        el.addEventListener('click', ()=>{
+          promptEl.value = decodeURIComponent(el.getAttribute('data-p'));
+        });
+      });
+    }
+
+    async function send(){
+      sendBtn.disabled = true; out.textContent = 'Sending...'; statusEl.textContent = 'Status: —'; timeEl.textContent = 'Time: —';
+      const prompt = promptEl.value || '';
+      const start = performance.now();
+      try{
+        const resp = await fetch('/app', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt}) });
+        const ms = Math.round(performance.now()-start);
+        timeEl.textContent = 'Time: ' + ms + ' ms';
+        statusEl.textContent = 'Status: ' + resp.status;
+        let text;
+        try{ text = await resp.text(); const json = JSON.parse(text); out.textContent = JSON.stringify(json, null, 2); }
+        catch(e){ out.textContent = text; }
+
+        const h = loadHistory(); h.push({ts: Date.now(), prompt, status: resp.status, ms}); saveHistory(h);
+        renderHistory(); updateChart(loadHistory()); updateStats(loadHistory());
+      }catch(err){
+        out.textContent = 'Request error: ' + err;
+        const h = loadHistory(); h.push({ts: Date.now(), prompt, status: 'ERR', ms: null}); saveHistory(h); renderHistory(); updateChart(loadHistory()); updateStats(loadHistory());
+      }finally{ sendBtn.disabled = false; }
+    }
+
+    sendBtn.addEventListener('click', send);
+    clearBtn.addEventListener('click', ()=>{ promptEl.value=''; out.textContent='(no response yet)'; statusEl.textContent='Status: —'; timeEl.textContent='Time: —'; });
+    copyCurl.addEventListener('click', ()=>{
+      const prompt = promptEl.value||''; const curl = `curl -X POST -H "Content-Type: application/json" -d '${JSON.stringify({prompt})}' http://localhost:5000/app`;
+      navigator.clipboard.writeText(curl).then(()=>{ copyCurl.textContent='Copied'; setTimeout(()=>copyCurl.textContent='Copy curl',1500); });
+    });
+
+    function updateStats(h){
+      const s = computeStats(h);
+      document.getElementById('stat-count').textContent = s.count;
+      document.getElementById('stat-avg').textContent = s.count? s.avg : '—';
+      document.getElementById('stat-median').textContent = s.count? s.median : '—';
+      document.getElementById('stat-min').textContent = s.count? s.min : '—';
+      document.getElementById('stat-max').textContent = s.count? s.max : '—';
+    }
+
+    // initialize
+    renderHistory(); updateChart(loadHistory()); updateStats(loadHistory());
+  </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ A Flask-based chatbot that receives incoming messages from Twilio-proxied WhatsA
 - Webhook endpoint for Twilio-based WhatsApp message events (`/whatsapp`)
 - Optional Telegram mention handler (`/telegram`)
 - Browser-accessible `/app` endpoint for local JSON testing
+- Developer debug UI at `/debug` with authenticated access, timing statistics, request history and a response-time chart
 - Minimal Flask app suitable for deployment with `gunicorn`
 
 ## Requirements
@@ -41,9 +42,14 @@ Create a `.env` file in the project root or set these variables in your deployme
 PORT=5000
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 HOISTED_FRONTEND_URL=https://your-frontend.example.com/
+# Optional / Debug UI (use only in development or behind a secure network)
+FLASK_SECRET_KEY=replace-with-a-random-secret
+DEBUG_PASSWORD=your_debug_password
 ```
 
-Note: `AI_BACKEND_URL` is currently configured directly in `app.py`.
+Notes:
+- `AI_BACKEND_URL` is currently set inside `app.py`. You can move it into an environment variable if you prefer.
+- `FLASK_SECRET_KEY` is used to secure session cookies for the `/debug` login. Set a long random value in production.
 
 ## Local Development
 
@@ -55,11 +61,25 @@ python app.py
 
 The app will listen on `http://0.0.0.0:5000` by default.
 
+### Debug UI (`/debug`)
+
+- Visit `http://localhost:5000/debug`. The endpoint is protected by a simple password form.
+- Default password: `debugpass` (if `DEBUG_PASSWORD` is not set). Change `DEBUG_PASSWORD` before exposing the UI.
+- Features of the debug page:
+  - Send a prompt to the `/app` endpoint and view the JSON reply.
+  - Response-time measurement (ms) for each request.
+  - Local request history (stored in your browser's `localStorage`) — click an item to repopulate the prompt.
+  - Statistics panel showing Requests, Average, Median, Min, and Max response times.
+  - Line chart of recent response times (Chart.js is loaded from CDN).
+  - "Copy curl" button to copy a ready-made curl command for reproduction.
+
+Security note: the debug UI is intended for local development or secured staging environments only. Do not expose it to the public internet without additional protections.
+
 ### Notes for development
 
 - Keep secrets out of source control. Use a `.env` file locally and set real
   secrets in your cloud provider's environment variables when deploying.
-- If you modify `app.py`, run the app in a dedicated virtual environment to
+- If you modify `app.py` or the templates, run the app in a dedicated virtual environment to
   avoid dependency conflicts.
 
 ## Production Deployment
@@ -105,6 +125,7 @@ Set the same environment variables in the Render dashboard.
 - `app.py` - main Flask app and webhook handlers
 - `requirements.txt` - Python package requirements
 - `templates/index.html` - web UI template for local testing
+- `templates/debug.html` - developer debug UI with timing/stats/chart
 - `static/` - static assets for the frontend
 
 ## Authors

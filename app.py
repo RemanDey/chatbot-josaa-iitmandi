@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from dotenv import load_dotenv
 import requests
 from twilio.twiml.messaging_response import MessagingResponse
@@ -11,7 +11,16 @@ external AI backend. Routes include:
  - /whatsapp : Twilio/Twilio-Proxy POST webhook (Twilio-style form fields)
  - /telegram : Telegram webhook receiver for bot mentions
  - /app      : JSON HTTP API for browser-based testing
+ - /debug    : Developer debug UI (protected by a simple session login)
  - /         : Simple web UI
+
+The `/debug` endpoint provides a password-protected developer console used
+to verify frontend↔backend connectivity. It includes an interactive prompt
+input that POSTs to `/app`, measures response time, stores a local request
+history in the browser, computes basic timing statistics (avg/median/min/max),
+and renders a response-time chart (Chart.js via CDN). Access is controlled by
+session cookies; set `FLASK_SECRET_KEY` to secure sessions and `DEBUG_PASSWORD`
+to change the debug password (defaults to `debugpass` for local testing).
 
 This file intentionally keeps the runtime small and framework-agnostic so it
 is easy to deploy behind a WSGI server (gunicorn/uvicorn) in production.
@@ -22,6 +31,9 @@ Security and production notes:
  - Validate and sanitize incoming webhook payloads where possible.
  - Use TLS/HTTPS in production and configure the platform’s secret verification
      (Meta webhook verify token / Telegram bot secure settings / Twilio auth).
+ - The `/debug` UI is intended for local development or secured staging
+     environments only. Do NOT expose `/debug` to the public internet without
+     additional access controls (VPN, firewall rules, or stronger auth).
 """
 
 # Load environment variables from a local .env file when developing locally.
@@ -42,6 +54,40 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 # Create Flask app instance. When running under gunicorn, use the module name
 # target `app:app` so the WSGI server can import this object.
 app = Flask(__name__)
+
+# Session / debug configuration
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-me-in-prod")
+DEBUG_PASSWORD = os.getenv("DEBUG_PASSWORD", "debugpass")
+
+
+def _debug_is_authenticated():
+    return bool(session.get("debug_auth"))
+
+
+@app.route("/debug/login", methods=["GET", "POST"])
+def debug_login():
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if password == DEBUG_PASSWORD:
+            session["debug_auth"] = True
+            return redirect(url_for("debug"))
+        flash("Invalid password", "error")
+    return render_template("login.html")
+
+
+@app.route("/debug/logout", methods=["GET"])
+def debug_logout():
+    session.pop("debug_auth", None)
+    return redirect(url_for("debug_login"))
+
+
+@app.route("/debug", methods=["GET"])
+def debug():
+    if not _debug_is_authenticated():
+        return redirect(url_for("debug_login"))
+    # The debug UI (templates/debug.html) uses the browser to POST to `/app`
+    # and displays the response. This page is intentionally lightweight.
+    return render_template("debug.html")
 
 @app.route("/telegram", methods=["POST"])
 def telegram_webhook():
