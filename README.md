@@ -1,13 +1,12 @@
 # IIT MANDI JOSAA CHATBOT
 
-A Flask-based chatbot that forwards user text to an AI backend and returns replies using Meta's WhatsApp Business API.
+A Flask-based chatbot that receives incoming messages from Twilio-proxied WhatsApp, supports optional Telegram bot mentions, and forwards prompts to an external AI backend.
 
 ## Features
-- Webhook endpoint for WhatsApp message events
-- AI response generation via an external backend API
-- Browser-accessible `/app` endpoint for local testing
-- Production-ready configuration with environment variables
-- Deployment support via `gunicorn`
+- Webhook endpoint for Twilio-based WhatsApp message events (`/whatsapp`)
+- Optional Telegram mention handler (`/telegram`)
+- Browser-accessible `/app` endpoint for local JSON testing
+- Minimal Flask app suitable for deployment with `gunicorn`
 
 ## Requirements
 - Python 3.10+
@@ -39,16 +38,12 @@ A Flask-based chatbot that forwards user text to an AI backend and returns repli
 Create a `.env` file in the project root or set these variables in your deployment environment:
 
 ```env
-VERIFY_TOKEN=your_meta_webhook_verify_token
-PHONE_NUMBER_ID=your_whatsapp_phone_number_id
-ACCESS_TOKEN=your_meta_graph_api_access_token
-AI_BACKEND_URL=http://127.0.0.1:8000/api/chat
 PORT=5000
-
-# Optional / Integration variables
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 HOISTED_FRONTEND_URL=https://your-frontend.example.com/
 ```
+
+Note: `AI_BACKEND_URL` is currently configured directly in `app.py`.
 
 ## Local Development
 
@@ -63,9 +58,9 @@ The app will listen on `http://0.0.0.0:5000` by default.
 ### Notes for development
 
 - Keep secrets out of source control. Use a `.env` file locally and set real
-   secrets in your cloud provider's environment variables when deploying.
+  secrets in your cloud provider's environment variables when deploying.
 - If you modify `app.py`, run the app in a dedicated virtual environment to
-   avoid dependency conflicts.
+  avoid dependency conflicts.
 
 ## Production Deployment
 
@@ -87,37 +82,23 @@ Set the same environment variables in the Render dashboard.
 
 ## Security & Operational Notes
 
-- Validate webhook requests:
-   - For Twilio: validate the Twilio signature on incoming requests.
-   - For Telegram: limit the webhook endpoint to Telegram IP ranges or verify
-      requests when possible.
-- Use TLS/HTTPS in production and configure your WAF or reverse proxy to
-   handle TLS termination.
-- Monitor logs and configure health checks for the AI backend service.
+- Validate webhook requests when using Twilio to receive WhatsApp messages.
+- Use TLS/HTTPS in production and configure your reverse proxy to handle TLS termination.
+- Limit Telegram webhook access and verify incoming updates if possible.
+- Monitor service health for the AI backend service.
 
 ## Integration Points
 
-- WhatsApp (Meta): The webhook handler expects to receive messages via Twilio
-   or your chosen WhatsApp integration. Ensure your `ACCESS_TOKEN` and
-   `PHONE_NUMBER_ID` are set and valid.
-- Telegram: If you enable Telegram handling, set `TELEGRAM_BOT_TOKEN` and
-   configure your bot's webhook to point to `https://<your-host>/telegram`.
+- WhatsApp/Twilio: The `/whatsapp` endpoint expects Twilio-style form data with
+  `Body` and `From` fields.
+- Telegram: If enabled, set `TELEGRAM_BOT_TOKEN` and configure your bot webhook
+  to point to `https://<your-host>/telegram`.
 
 ## Troubleshooting
 
-- "AI backend unavailable": check that `AI_BACKEND_URL` is configured and the
-   backend is reachable from the host running this app.
-- Webhook not triggering: confirm external webhook URL is reachable and your
-   platform (Twilio/Meta/Telegram) is configured with the correct callback.
-- 500-level errors: inspect the container logs for tracebacks and enable
-   DEBUG only in local development.
-
-## Debugging and Troubleshooting
-
-- Check webhook verification by ensuring `VERIFY_TOKEN` matches the Meta webhook setup.
-- Confirm `PHONE_NUMBER_ID` and `ACCESS_TOKEN` are valid for the WhatsApp Business account.
-- Verify the AI backend at `AI_BACKEND_URL` is reachable and responding correctly.
-- Inspect logs for non-200 responses from Meta Graph API and from the AI backend.
+- "AI backend unavailable": check that the AI backend URL in `app.py` is reachable from the host running this app.
+- Webhook not triggering: confirm the external webhook URL is reachable and your platform (Twilio or Telegram) is configured with the correct callback.
+- 500-level errors: inspect application logs and only enable debug mode locally.
 
 ## Project Structure
 
@@ -126,6 +107,5 @@ Set the same environment variables in the Render dashboard.
 - `templates/index.html` - web UI template for local testing
 - `static/` - static assets for the frontend
 
-## Notes
-
-This repository also includes a `rag-backend/` folder with a separate RAG backend implementation and its own `requirements.txt`.
+## Authors
+Made by Reman Dey and Aryan Raj

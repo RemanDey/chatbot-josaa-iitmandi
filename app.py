@@ -42,6 +42,7 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 # Create Flask app instance. When running under gunicorn, use the module name
 # target `app:app` so the WSGI server can import this object.
 app = Flask(__name__)
+
 @app.route("/telegram", methods=["POST"])
 def telegram_webhook():
     """Receive Telegram webhook POSTs from the Bot API.
@@ -56,7 +57,6 @@ def telegram_webhook():
 
     # Basic defensive checks to avoid KeyError on malformed payloads.
     if not telegram_data:
-      
         return "OK", 200
 
     message = telegram_data.get("message")
@@ -65,6 +65,8 @@ def telegram_webhook():
 
     chat_id = message.get("chat", {}).get("id")
     incoming_text = message.get("text", "")
+
+    app.logger.info("Telegram message received from chat_id=%s", chat_id)
 
     # Trigger Condition: only reply if the bot is @-mentioned. This prevents
     # the bot from replying to every message in a group.
@@ -84,9 +86,10 @@ def telegram_webhook():
         # Fire-and-forget: we don't fail the webhook if Telegram call fails,
         # but in production you may want to check the response and retry.
         try:
-            requests.post(TELEGRAM_API_URL, json=payload, timeout=5)
+            response = requests.post(TELEGRAM_API_URL, json=payload, timeout=5)
+            response.raise_for_status()
         except Exception:
-            pass  # Log the exception in production for debugging
+            pass
 
     return "OK", 200
 
@@ -103,14 +106,11 @@ def whatsapp_webhook():
     incoming_msg = request.values.get("Body", "").strip()
     sender = request.values.get("From", "")
 
-    logging.info("Message from %s: %s", sender, incoming_msg)
-
     # Optionally, implement mention/group logic here to avoid noisy replies.
     cleaned_prompt = incoming_msg
 
-    # TODO: integrate with AI backend. Currently returns a placeholder reply.
-    ai_reply = f"Reman and Aryan's hehe  Response to '{cleaned_prompt}'"
 
+    ai_reply = f"JOSAA-ChatBot: {generate_ai_response(cleaned_prompt)}"
     twilio_response = MessagingResponse()
     twilio_response.message(ai_reply)
 
@@ -142,8 +142,10 @@ def generate_ai_response(prompt):
         )
 
     payload = {"query": prompt}
-    
+
+
     response = requests.post(AI_BACKEND_URL, json=payload)
+
     return response.text
 
 
