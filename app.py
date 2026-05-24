@@ -167,6 +167,10 @@ def index():
     """Render the web frontend."""
     return render_template("index.html")
 
+@app.route("/about", methods=["GET"])
+def about():
+    """Render the about page."""
+    return render_template("about.html")
 
 
 def generate_ai_response(prompt):
