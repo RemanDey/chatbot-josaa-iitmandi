@@ -22,7 +22,7 @@ def telegram_webhook():
     telegram_data = request.get_json()
     
     # Check if the incoming data contains a standard text message
-    if "message" in telegram_data and "text" in telegram_data["message"]:
+    if True:#"message" in telegram_data and "text" in telegram_data["message"]:
         chat_id = telegram_data["message"]["chat"]["id"]
         incoming_text = telegram_data["message"]["text"]
         
