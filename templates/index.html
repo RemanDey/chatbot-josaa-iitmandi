@@ -3,64 +3,93 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
     <title>JoSAAssist IIT-Mandi</title>
     <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
     <div class="gemini-shell">
-        <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-        </button>
-
-        <aside class="sidebar" id="sidebar">
-
-            <div class="sidebar-top">
-
-                <button class="sidebar-btn" onclick="window.open('https://josaa.nic.in/', '_blank')">
-                    JosAA 
+        <!-- Top bar (Gemini-like) -->
+        <header class="topbar" role="banner">
+            <div class="topbar-left">
+                <button id="menu-toggle" class="topbar-icon" aria-label="Toggle menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="4" y1="6" x2="20" y2="6"></line>
+                        <line x1="4" y1="12" x2="20" y2="12"></line>
+                        <line x1="4" y1="18" x2="20" y2="18"></line>
+                    </svg>
                 </button>
-                <br>
-                <button class="sidebar-btn" onclick="window.open('https://www.iitmandi.ac.in', '_blank')">
-                    IIT Mandi
-                </button>
-                <br>
-                <button class="sidebar-btn" onclick="window.open('https://www.iitmandi.ac.in', '_blank')">
-                    Other Links
-                </button>
-                <br>
-                <button class="sidebar-btn" onclick="window.location.href='/about';">
-                    About
-                </button>
-                <br>
-           
 
-                <button id="new-chat-btn" class="new-chat-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <img
+                    src="{{ url_for('static', filename='logo.png') }}"
+                    alt="JoSAAssist logo"
+                    class="topbar-logo"
+                />
+
+                <div class="topbar-brand">JoSAAssist · IIT-Mandi</div>
+            </div>
+
+            <div class="topbar-actions">
+                <button id="new-chat-btn" class="topbar-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                    New chat
+                    <span class="topbar-btn-text">New chat</span>
                 </button>
-
+                <a class="topbar-link" href="/about">About</a>
             </div>
-            <hr>
-            <div class="sidebar-history">
-                Recents
+        </header>
+
+        <aside class="sidebar" id="sidebar" aria-label="Chat sidebar">
+            <div class="sidebar-top">
+                <!-- Mobile close button (hidden on desktop via CSS) -->
+                <div class="sidebar-mobile-header">
+                    <div class="sidebar-title">Navigation</div>
+                    <button id="sidebar-close" class="sidebar-close" aria-label="Close sidebar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="sidebar-links">
+                    <button class="sidebar-btn" onclick="window.open('https://josaa.nic.in/', '_blank')">
+                        JosAA
+                    </button>
+                    <button class="sidebar-btn" onclick="window.open('https://www.iitmandi.ac.in', '_blank')">
+                        IIT Mandi
+                    </button>
+                    <button class="sidebar-btn" onclick="window.open('https://www.iitmandi.ac.in', '_blank')">
+                        Other Links
+                    </button>
+                    <button class="sidebar-btn" onclick="window.location.href='/about';">
+                        About
+                    </button>
+                </div>
+            </div>
+
+            <hr class="sidebar-divider" />
+
+            <div class="sidebar-history" aria-label="Recent chats">
+                <div class="sidebar-history-header">
+                    <div class="sidebar-history-title">Recents</div>
+                    <button id="clear-recents" class="sidebar-clear" type="button" aria-label="Clear chat history">
+                        Clear
+                    </button>
+                </div>
+
                 <div id="history-sidebar" class="history-items"></div>
             </div>
+
             <div class="sidebar-bottom">
                 <p class="footer-text"><a href="/about">Made by Aryan Raj and Reman Dey</a></p>
             </div>
         </aside>
 
         <main class="chat-container">
-            <div class="chat-header">
-                <h1>JoSAAssist IIT-Mandi</h1>
-            </div>
+
             <div id="chat-messages" class="chat-messages">
                 <div class="greeting-panel">
                     <h2>Hello. How can I help you today?</h2>

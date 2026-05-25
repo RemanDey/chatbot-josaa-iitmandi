@@ -6,6 +6,8 @@ const newChatBtn = document.getElementById("new-chat-btn");
 const historySidebar = document.getElementById("history-sidebar");
 const menuToggle = document.getElementById("menu-toggle");
 const sidebar = document.getElementById("sidebar");
+const sidebarCloseBtn = document.getElementById("sidebar-close");
+const clearRecentsBtn = document.getElementById("clear-recents");
 
 const STORAGE_KEY = "josaa-conversations";
 let conversationHistory = [];
@@ -34,6 +36,13 @@ function saveToStorage() {
 menuToggle.addEventListener("click", () => {
     sidebar.classList.toggle("open");
 });
+
+// Close sidebar button (mobile)
+if (sidebarCloseBtn) {
+    sidebarCloseBtn.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+    });
+}
 
 // Close sidebar when clicking outside on mobile
 document.addEventListener("click", (e) => {
@@ -211,23 +220,29 @@ function saveConversation() {
 
 function renderSidebarHistory() {
     historySidebar.innerHTML = "";
+
     if (conversations.length === 0) {
         const empty = document.createElement("div");
-        empty.style.color = "#666666";
-        empty.style.fontSize = "0.85rem";
-        empty.style.padding = "12px 16px";
-        empty.style.textAlign = "center";
+        empty.className = "history-empty";
         empty.textContent = "No chat history yet";
         historySidebar.appendChild(empty);
         return;
     }
-    
+
     conversations.slice(0, 20).forEach(conv => {
         const item = document.createElement("button");
         item.className = "history-item";
         item.textContent = conv.title;
+        item.dataset.convId = conv.id;
+
+        if (currentConvId && conv.id === currentConvId) {
+            item.classList.add("active");
+            item.setAttribute("aria-current", "true");
+        }
+
         item.addEventListener("click", () => loadConversation(conv.id));
         historySidebar.appendChild(item);
+
     });
 }
 
@@ -238,7 +253,10 @@ function loadConversation(convId) {
         currentConvId = convId;
         chatMessages.innerHTML = "";
         conversationHistory.forEach(msg => addMessageToUI(msg.content, msg.role === "user"));
-        
+
+        // Update active state in sidebar
+        renderSidebarHistory();
+
         // Close sidebar on mobile
         if (window.innerWidth <= 768) {
             sidebar.classList.remove("open");
@@ -268,6 +286,23 @@ chatForm.addEventListener("submit", (e) => {
 });
 
 newChatBtn.addEventListener("click", startNewChat);
+
+// Clear recents
+if (clearRecentsBtn) {
+    clearRecentsBtn.addEventListener("click", () => {
+        if (!conversations.length) return;
+
+        const ok = window.confirm("Clear all chat recents from this device?");
+        if (!ok) return;
+
+        conversations = [];
+        conversationHistory = [];
+        currentConvId = null;
+        saveToStorage();
+        renderSidebarHistory();
+        startNewChat();
+    });
+}
 
 // Handle window resize for responsive behavior
 window.addEventListener("resize", () => {
