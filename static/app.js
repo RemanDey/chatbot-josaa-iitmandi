@@ -142,30 +142,31 @@ async function typeSegmentsOnPre(pre, lines, speed = 35, lineDelay = 140) {
 }
 
 function renderInitialBootSequence() {
-    const lines = [
-        [ { text: '>', cls: 'tok-prompt' }, { text: ' Initializing ', cls: 'tok-action' }, { text: 'IIT Mandi Gateway', cls: 'tok-variable' }, { text: '...', cls: '' } ],
-        [ { text: '>', cls: 'tok-prompt' }, { text: ' Fetching JoSAA seat matrix... ', cls: '' }, { text: ' [SUCCESS]', cls: 'tok-status' } ],
-        [ { text: '>', cls: 'tok-prompt' }, { text: ' Loading closing rank datasets... ', cls: '' }, { text: ' [OK]', cls: 'tok-status' } ],
-        [ { text: '>', cls: 'tok-prompt' }, { text: ' System ready. Awaiting user input...', cls: '' } ]
-    ];
+    // const lines = [
+    //     [ { text: '>', cls: 'tok-prompt' }, { text: ' Initializing ', cls: 'tok-action' }, { text: 'IIT Mandi Gateway', cls: 'tok-variable' }, { text: '...', cls: '' } ],
+    //     [ { text: '>', cls: 'tok-prompt' }, { text: ' Fetching JoSAA seat matrix... ', cls: '' }, { text: ' [SUCCESS]', cls: 'tok-status' } ],
+    //     [ { text: '>', cls: 'tok-prompt' }, { text: ' Loading closing rank datasets... ', cls: '' }, { text: ' [OK]', cls: 'tok-status' } ],
+    //     [ { text: '>', cls: 'tok-prompt' }, { text: ' System ready. Awaiting user input...', cls: '' } ]
+    // ];
 
-    const messageDiv = document.createElement("div");
-        messageDiv.className = "message terminal system";
+    // const messageDiv = document.createElement("div");
+    //     messageDiv.className = "message terminal system";
 
 
-    const content = document.createElement("div");
-    content.className = "message-content";
+    // const content = document.createElement("div");
+    // content.className = "message-content";
 
-    const pre = document.createElement("pre");
-    pre.className = 'terminal-pre';
-    content.appendChild(pre);
+    // const pre = document.createElement("pre");
+    // pre.className = 'terminal-pre';
+    // content.appendChild(pre);
 
-    messageDiv.appendChild(content);
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // messageDiv.appendChild(content);
+    // chatMessages.appendChild(messageDiv);
+    // chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // start async typing (don't block)
-    typeSegmentsOnPre(pre, lines, 28, 120).catch(console.error);
+    // // start async typing (don't block)
+    // typeSegmentsOnPre(pre, lines, 28, 120).catch(console.error);
+    console.log("JOSAA ASSIST ACTIVE!!!\nThis is JoSAAssist, made by Reman Dey and Aryan Raj");
 }
 
 async function sendMessage(text) {
