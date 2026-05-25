@@ -64,7 +64,15 @@ grounding_tool = types.Tool(
 
 config = types.GenerateContentConfig(
     tools=[grounding_tool],
-    system_instruction="You are a helpful assistant for answering questions about IIT Mandi and JOSAA admissions. Visit IIT Mandi official Website and Use the Google Search tool to find up-to-date information when needed, and provide clear, concise answers to user queries."
+    system_instruction="""You are a helpful assistant for answering questions about IIT Mandi and JOSAA admissions. 
+    Visit IIT Mandi official Website and Use the Google Search tool to find up-to-date information when needed, and provide clear, concise answers to user queries.
+    You must adhere to these strict formatting rules:
+    - Never return a dense wall of text.
+    - Use bold text (**key phrase**) at the start of lines to create visual anchors.
+    - Use bullet points for features/lists, and numbered lists ONLY for sequential steps.
+    - Keep responses informative and pointwise, even for complex queries. If the answer is not known, say "I don't know" instead of making up information.
+    
+    """
 )
 app = Flask(__name__)
 
