@@ -183,7 +183,8 @@ def generate_ai_response(prompt):
     # Quick, deterministic responses used during local development and demos.
     if prompt == "ps":
         return "Reman Loves To Solve PS:)hehe"
-
+    if "hi" in prompt.lower() or "hello" in prompt.lower():
+        return "Hello! I'm JoSAAssist, your IIT Mandi admissions assistant. How can I help you today?"
     if "reman" in prompt.lower():
         return (
             "Reman Dey is My Creator!!!MY GODDDDDDDDDDD!!! "
@@ -228,4 +229,4 @@ def web_app_response():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port,debug=True)

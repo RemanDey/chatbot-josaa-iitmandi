@@ -116,8 +116,8 @@ async function typeSegmentsOnPre(pre, lines, speed = 35, lineDelay = 140) {
 function renderInitialBootSequence() {
     const lines = [
         [ { text: '>', cls: 'tok-prompt' }, { text: ' Initializing ', cls: 'tok-action' }, { text: 'IIT Mandi Gateway', cls: 'tok-variable' }, { text: '...', cls: '' } ],
-        [ { text: '>', cls: 'tok-prompt' }, { text: ' Fetching latest JoSAA seat matrix... ', cls: '' }, { text: ' [SUCCESS]', cls: 'tok-status' } ],
-        [ { text: '>', cls: 'tok-prompt' }, { text: ' Loading historical closing rank datasets... ', cls: '' }, { text: ' [OK]', cls: 'tok-status' } ],
+        [ { text: '>', cls: 'tok-prompt' }, { text: ' Fetching JoSAA seat matrix... ', cls: '' }, { text: ' [SUCCESS]', cls: 'tok-status' } ],
+        [ { text: '>', cls: 'tok-prompt' }, { text: ' Loading closing rank datasets... ', cls: '' }, { text: ' [OK]', cls: 'tok-status' } ],
         [ { text: '>', cls: 'tok-prompt' }, { text: ' System ready. Awaiting user input...', cls: '' } ]
     ];
 
