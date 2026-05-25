@@ -218,7 +218,8 @@ def generate_ai_response(prompt):
 
     # response = requests.post(AI_BACKEND_URL, json=payload)
     # processessed_reply = format_ai_response(response)
-    processessed_reply = generate_api_response(prompt)
+    raw_reply = generate_api_response(prompt)
+    processessed_reply = format_api_response(raw_reply)
     return processessed_reply
 
 def format_ai_response(raw_response):
@@ -231,7 +232,17 @@ def format_ai_response(raw_response):
     data = raw_response.json()
     processed_response = data["answer"]
     return processed_response
+def format_api_response(raw_response):
+    """Format the raw API response from Google GenAI.
 
+    This function can be used to apply any necessary transformations to the
+    response text, such as markdown formatting, truncation, or handling of
+    special tokens returned by the model.
+    """
+    # For this example, we simply return the text as-is, but you could add
+    # additional formatting logic here if needed.
+    clean_response = raw_response.replace("*","")
+    return clean_response
 def generate_api_response(prompt):
     """Generate a response for API requests from Google GenAI.
 

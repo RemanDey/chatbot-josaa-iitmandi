@@ -460,6 +460,7 @@ body {
 }
 
 .chat-messages {
+    white-space: pre-wrap;
     flex: 1;
     overflow-y: auto;
     padding: 20px;
