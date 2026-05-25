@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify, render_template, session, redirect, u
 from dotenv import load_dotenv
 import requests
 from twilio.twiml.messaging_response import MessagingResponse
+from google import genai
+from google.genai import types
 
 # Basic module-level documentation:
 """
@@ -53,6 +55,17 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
 # Create Flask app instance. When running under gunicorn, use the module name
 # target `app:app` so the WSGI server can import this object.
+API_KEY = os.getenv("GOOGLE_API_KEY")
+client = genai.Client(api_key=API_KEY)
+
+grounding_tool = types.Tool(
+    google_search=types.GoogleSearch()
+)
+
+config = types.GenerateContentConfig(
+    tools=[grounding_tool],
+    system_instruction="You are a helpful assistant for answering questions about IIT Mandi and JOSAA admissions. Visit IIT Mandi official Website and Use the Google Search tool to find up-to-date information when needed, and provide clear, concise answers to user queries."
+)
 app = Flask(__name__)
 
 # Session / debug configuration
@@ -192,11 +205,12 @@ def generate_ai_response(prompt):
             "Visit his portfolio at remandey.github.io/my-portfolio . "
         )
 
-    payload = {"query": prompt}
+    # payload = {"query": prompt}
 
 
-    response = requests.post(AI_BACKEND_URL, json=payload)
-    processessed_reply = format_ai_response(response)
+    # response = requests.post(AI_BACKEND_URL, json=payload)
+    # processessed_reply = format_ai_response(response)
+    processessed_reply = generate_api_response(prompt)
     return processessed_reply
 
 def format_ai_response(raw_response):
@@ -210,7 +224,20 @@ def format_ai_response(raw_response):
     processed_response = data["answer"]
     return processed_response
 
+def generate_api_response(prompt):
+    """Generate a response for API requests from Google GenAI.
 
+    This function can be used to centralize any logic that should apply to
+    both webhook and API responses, such as logging, metrics, or special
+    formatting.
+    """
+    response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt,
+    config=config,
+    )
+
+    return response.text
 @app.route("/app", methods=["POST"])
 def web_app_response():
     """Return a JSON response for browser-based requests.
