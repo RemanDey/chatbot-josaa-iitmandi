@@ -60,6 +60,25 @@ function autoResizeTextarea() {
 
 chatInput.addEventListener("input", autoResizeTextarea);
 
+// Send message on Enter key (Shift+Enter keeps newline behavior)
+chatInput.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+
+    // If Shift is held, allow newline
+    if (e.shiftKey) return;
+
+    e.preventDefault();
+
+    // Avoid submitting while a message is in-flight
+    if (sendBtn && sendBtn.disabled) return;
+
+    const text = chatInput.value.trim();
+    if (text) {
+        sendMessage(text);
+    }
+});
+
+
 function addMessageToUI(text, isUser = true, usePre = false, extraClass = "") {
     const messageDiv = document.createElement("div");
     messageDiv.className = `message ${isUser ? "user" : "assistant"}${extraClass ? ` ${extraClass}` : ""}`;
