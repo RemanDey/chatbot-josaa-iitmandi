@@ -187,8 +187,9 @@ def generate_ai_response(prompt):
         return "Hello! I'm JoSAAssist, your IIT Mandi admissions assistant. How can I help you today?"
     if "reman" in prompt.lower():
         return (
-            "Reman Dey is My Creator!!!MY GODDDDDDDDDDD!!! "
-            "visit his portfolio at remandey.github.io/my-portfolio . "
+            "Reman Dey, a 2nd Year Engineering Physics student at IIT Mandi, made this bot frontend and the Whatsapp and Telegram integrations."
+            "He is a technology enthusiast and aspiring engineer with interests in robotics, embedded systems, artificial intelligence, and computational modeling. He has worked on projects involving ESP8266-based rover systems, ROS-controlled robots, and AI weather prediction frameworks such as GenCast."
+            "Visit his portfolio at remandey.github.io/my-portfolio . "
         )
 
     payload = {"query": prompt}
