@@ -86,20 +86,15 @@ function addMessageToUI(text, isUser = true, usePre = false, extraClass = "") {
     const avatar = document.createElement("div");
     avatar.className = "message-avatar";
     avatar.textContent = isUser ? "U" : "J";
-    // 2. Configure marked options (Ensures tables and line breaks render correctly)
-    marked.setOptions({
-        breaks: true, // Converts \n into <br> tags automatically
-        gfm: true     // Enables GitHub Flavored Markdown (for tables)
-    });
-    const cleanHtml = marked.parse(text);
+
     const content = document.createElement("div");
     content.className = "message-content";
     if (usePre) {
         const pre = document.createElement("pre");
-        pre.innerHTML = cleanHtml;
+        pre.textContent = text;
         content.appendChild(pre);
     } else {
-        content.innerHTML = cleanHtml;
+        content.textContent = text;
     }
 
     messageDiv.appendChild(avatar);
