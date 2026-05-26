@@ -317,16 +317,17 @@ def generate_ai_response(prompt):
             and any(phrase in normalized_prompt for phrase in identity_contains)
         )
     ):
-        return "I am chat bot JoSAA assistant for IIT Mandi."
+        return "I am chat bot JoSAAssist for IIT Mandi JosAA Counselling."
 
     if prompt == "ps":
         return "Reman Loves To Solve PS:)hehe"
     if " hi " in prompt.lower() or " hello " in prompt.lower():
         return "Hello! I'm JoSAAssist, your IIT Mandi admissions assistant. How can I help you today?"
-    if " reman " in prompt.lower():
+    if " reman " in prompt.lower() or prompt.lower().startswith("reman") or prompt.lower().endswith("reman"):
         return (
             "Reman Dey, a 2nd Year Engineering Physics student at IIT Mandi, made this bot frontend and the Whatsapp and Telegram integrations."
-            "He is a technology enthusiast and aspiring engineer with interests in robotics, embedded systems, artificial intelligence, and computational modeling. He has worked on projects involving ESP8266-based rover systems, ROS-controlled robots, and AI weather prediction frameworks such as GenCast."
+            "He is a technology enthusiast and aspiring engineer with interests in robotics, embedded systems, artificial intelligence, and computational modeling." 
+            "He has worked on projects involving ESP8266-based rover systems, ROS-controlled robots, and AI weather prediction frameworks such as GenCast."
             "Visit his portfolio at remandey.github.io/my-portfolio . "
         )
 

@@ -2,13 +2,13 @@
   "hardcoded_triggers": [
     {
       "id": "total_btech_courses",
-      "keywords": ["how many courses", "list of branches", "available engineering branches", "btech programs", "what courses are offered"],
+      "keywords": ["how many courses", "list of branches", "available branches", "btech programs", "what courses are offered"],
       "response": "IIT Mandi offers 11 distinct B.Tech disciplines and 1 Bachelor of Science (BS) program, under JoSAA: \n\n1. Computer Science & Engineering (CSE), \n2. Data Science & Artificial Intelligence (DS-AI), \n3. Mathematics & Computing (MnC), \n4. Electrical Engineering (EE), \n5. Microelectronics & VLSI, \n6. Mechanical Engineering (ME), \n7. Civil Engineering (CE), \n8. Engineering Physics (EP), \n9. Bio-Engineering, \n10. Materials Science & Engineering, \n11. General Engineering"
     },
     {
       "id": "seat_matrix_capacity",
       "keywords": ["total seats", "seat matrix", "intake capacity", "how many seats"],
-      "response": "The total undergraduate intake capacity at IIT Mandi is roughly 520 seats across all branches (including female supernumerary quotas). The approximate seat distribution per branch includes: CSE (80), EE (70), ME (60), CE (50), DS-AI (50), EP (30), Bio-Engg (30), General Engg (30), Materials Science (30), Microelectronics & VLSI (30), MnC (30), and BS Chemical Sciences (30). Make sure to check the live JoSAA seat matrix dashboard for the absolute final seat counts."
+      "response": "**IIT Mandi Undergraduate Seat Matrix Overview**\n\nIIT Mandi offers an approximate total pool of **520 seats** across its standard 4-year undergraduate tracks (B.Tech and BS programs) through JoSAA counseling.\n\n> **Note on Seat Pools:** The total intake includes both the Gender-Neutral pool and the Female Supernumerary pool (which adds extra seats to achieve the required 20% female enrollment mandated by the ministry).\n\n---\n\n**Branch-Wise Seat Distribution**\n\nThe baseline sanctioned seat capacities per branch follow this breakdown (Core Intake / Total Allotted Base including Female Pool):\n\n* **1. Computer Science and Engineering (CSE):** 64 Core | ~80 Total Seats\n* **2. Electrical Engineering (EE):** 56 Core | ~70 Total Seats\n* **3. Mechanical Engineering (ME):** 48 Core | ~60 Total Seats\n* **4. Civil Engineering (CE):** 40 Core | ~50 Total Seats\n* **5. Data Science and Artificial Intelligence (DSAI):** 40 Core | ~50 Total Seats\n* **6. Mathematics and Computing (MC):** 24 Core | ~30 Total Seats\n* **7. Microelectronics & VLSI (M&VLSI):** 24 Core | ~30 Total Seats\n* **8. Engineering Physics (EP):** 24 Core | ~30 Total Seats\n* **9. General Engineering (GE):** 24 Core | ~30 Total Seats\n* **10. Bio-Engineering (Bio):** 24 Core | ~30 Total Seats\n* **11. Materials Science and Engineering (MSE):** 24 Core | ~30 Total Seats\n* **12. BS in Chemical Sciences (BSCS):** 24 Core | ~30 Total Seats\n\nVisit JoSAA's official seat matrix for IIT Mandi for the most current and detailed breakdown: https://josaa.admissions.nic.in/applicant/seatmatrix/seatmatrixinfo.aspx ."
     },
     {
       "id": "double_major_policy",
