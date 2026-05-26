@@ -230,8 +230,7 @@ async def root() -> Dict[str, str]:
 @limiter.limit(settings.rate_limit_per_minute)
 async def chat(
     request: Request,
-    body: ChatRequest,
-    _api_key: None = Depends(verify_api_key)
+    body: ChatRequest
 ) -> Dict[str, Any]:
     """
     Process a user query through the full RAG pipeline:
