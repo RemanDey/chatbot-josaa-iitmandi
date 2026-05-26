@@ -3,7 +3,7 @@
     {
       "id": "total_btech_courses",
       "keywords": ["how many courses", "list of branches", "available engineering branches", "btech programs", "what courses are offered"],
-      "response": "IIT Mandi offers 11 distinct B.Tech disciplines, 1 Bachelor of Science (BS) program, and 1 Integrated Master's program under JoSAA: 1. Computer Science & Engineering (CSE), 2. Data Science & Artificial Intelligence (DS-AI), 3. Mathematics & Computing (MnC), 4. Electrical Engineering (EE), 5. Microelectronics & VLSI, 6. Mechanical Engineering (ME), 7. Civil Engineering (CE), 8. Engineering Physics (EP), 9. Bio-Engineering, 10. Materials Science & Engineering, 11. General Engineering, 12. BS in Chemical Sciences, and 13. Integrated MBA (IMBA)."
+      "response": "IIT Mandi offers 11 distinct B.Tech disciplines and 1 Bachelor of Science (BS) program, under JoSAA: \n\n1. Computer Science & Engineering (CSE), \n2. Data Science & Artificial Intelligence (DS-AI), \n3. Mathematics & Computing (MnC), \n4. Electrical Engineering (EE), \n5. Microelectronics & VLSI, \n6. Mechanical Engineering (ME), \n7. Civil Engineering (CE), \n8. Engineering Physics (EP), \n9. Bio-Engineering, \n10. Materials Science & Engineering, \n11. General Engineering"
     },
     {
       "id": "seat_matrix_capacity",
