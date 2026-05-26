@@ -257,7 +257,7 @@ def generate_api_response(prompt):
     key=random.choice([API_KEY_1, API_KEY_2, API_KEY_3, API_KEY_4])
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-    model="gemini-2.5-flash-lite",
+    model="gemini-2.5-flash",
     contents=prompt,
     config=config,
     )
