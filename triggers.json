@@ -1,0 +1,34 @@
+{
+  "hardcoded_triggers": [
+    {
+      "id": "total_btech_courses",
+      "keywords": ["how many courses", "list of branches", "available engineering branches", "btech programs", "what courses are offered"],
+      "response": "IIT Mandi offers 11 distinct B.Tech disciplines, 1 Bachelor of Science (BS) program, and 1 Integrated Master's program under JoSAA: 1. Computer Science & Engineering (CSE), 2. Data Science & Artificial Intelligence (DS-AI), 3. Mathematics & Computing (MnC), 4. Electrical Engineering (EE), 5. Microelectronics & VLSI, 6. Mechanical Engineering (ME), 7. Civil Engineering (CE), 8. Engineering Physics (EP), 9. Bio-Engineering, 10. Materials Science & Engineering, 11. General Engineering, 12. BS in Chemical Sciences, and 13. Integrated MBA (IMBA)."
+    },
+    {
+      "id": "seat_matrix_capacity",
+      "keywords": ["total seats", "seat matrix", "intake capacity", "how many seats"],
+      "response": "The total undergraduate intake capacity at IIT Mandi is roughly 520 seats across all branches (including female supernumerary quotas). The approximate seat distribution per branch includes: CSE (80), EE (70), ME (60), CE (50), DS-AI (50), EP (30), Bio-Engg (30), General Engg (30), Materials Science (30), Microelectronics & VLSI (30), MnC (30), and BS Chemical Sciences (30). Make sure to check the live JoSAA seat matrix dashboard for the absolute final seat counts."
+    },
+    {
+      "id": "double_major_policy",
+      "keywords": ["double major", "second major", "can i change branch to cse", "minor degree"],
+      "response": "IIT Mandi features a highly flexible 'Double Major' system introduced from 2021. This allows a student in any core branch (like Civil or Mechanical) to earn a second major degree in another field (including Computer Science & Engineering) by completing approximately 12 additional specialized courses across an extra 1 to 2 semesters. Minor specializations (3 to 4 extra courses) are also available in areas like Management, Intelligent Systems, and German language."
+    },
+    {
+      "id": "dual_degree_integrated",
+      "keywords": ["dual degree", "mtech integrated", "btech mtech combined", "imba"],
+      "response": "For candidates looking at integrated profiles, IIT Mandi offers a 5-year B.Tech-M.Tech Integrated Dual Degree in Bio-Engineering. Additionally, the School of Management offers a 5-year Integrated Master of Business Administration (IMBA) program directly open to students after their Class 12 board qualifications through JEE Advanced allocations."
+    },
+    {
+      "id": "tuition_fees_structure",
+      "keywords": ["btech fees", "hostel fees", "semester fee", "how much is the fee"],
+      "response": "The tuition fee for the 4-year B.Tech/BS program at IIT Mandi is approximately ₹1,00,000 per semester for General, EWS, and OBC candidates (total academic expenses hover around ₹8.25 Lakhs across 4 years). Candidates should note that 100% tuition fee waivers are applicable for SC, ST, and PwD candidates, and partial-to-full waivers exist for economically weaker sections based on verified family income declarations."
+    },
+    {
+      "id": "academic_calendar_duration",
+      "keywords": ["semester system", "when do classes start", "academic year timeline"],
+      "response": "IIT Mandi follows a strict semester system. The academic year is divided into two terms: the Odd Semester (running from early August through late November/early December) and the Even Semester (running from February through June). Each semester runs roughly 18 weeks, which includes instructional days, mid-semester checks, and end-semester evaluations."
+    }
+  ]
+}

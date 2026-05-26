@@ -14,6 +14,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from google import genai
 from google.genai import types
 import random
+import hardcoded_responses
 # Basic module-level documentation:
 """
 Lightweight Flask webhook service for integrating WhatsApp/Telegram with an
@@ -334,7 +335,11 @@ def generate_ai_response(prompt):
     cached_reply = get_cached(prompt)
     if cached_reply is not None:
         return cached_reply
-
+    #generating hardcodede responses
+    hardcoded_router = hardcoded_responses.hardcoded_responses("triggers.json")
+    hardcoded_reply, bypassed = hardcoded_router.process_prompt(prompt)
+    if bypassed:
+        return hardcoded_reply
     # payload = {"query": prompt}
 
 
