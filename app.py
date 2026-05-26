@@ -394,7 +394,7 @@ def _build_combined_prompt(prompt):
             "Mandi or JoSAA information is needed, resolve conflicts clearly, "
             "and keep the response concise and pointwise."
         )
-    return prompt
+    return combined_prompt if rag_answer else prompt
 
 
 def _extract_chat_completion_text(data):
