@@ -195,7 +195,7 @@ async function sendMessage(text) {
         if (!res.ok) {
             const errorData = await res.json();
             const lastMsg = chatMessages.lastElementChild;
-            lastMsg.querySelector(".message-content").textContent = errorData.error || "Failed to fetch reply.";
+            lastMsg.querySelector(".message-content").innerHTML = errorData.error || "Failed to fetch reply.";
             return;
         }
 
@@ -204,13 +204,13 @@ async function sendMessage(text) {
         conversationHistory.push({ role: "assistant", content: reply });
 
         const lastMsg = chatMessages.lastElementChild;
-        lastMsg.querySelector(".message-content").textContent = reply;
+        lastMsg.querySelector(".message-content").innerHTML = reply;
 
         saveConversation();
     } catch (error) {
         console.error(error);
         const lastMsg = chatMessages.lastElementChild;
-        lastMsg.querySelector(".message-content").textContent = "Unable to reach the server.";
+        lastMsg.querySelector(".message-content").innerHTML = "Unable to reach the server.";
     } finally {
         sendBtn.disabled = false;
     }

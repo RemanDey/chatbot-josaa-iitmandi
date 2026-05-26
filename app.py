@@ -92,12 +92,15 @@ config = types.GenerateContentConfig(
     tools=[grounding_tool],
     system_instruction="""You are a helpful assistant for answering questions about IIT Mandi and JOSAA admissions. 
     Visit IIT Mandi official Website and Use the Google Search tool to find up-to-date information when needed, and provide clear, concise answers to user queries.
-    You must adhere to these strict formatting rules:
-    - Never return a dense wall of text.
-    - Use bold text (**key phrase**) at the start of lines to create visual anchors.
-    - Use bullet points for features/lists, and numbered lists ONLY for sequential steps.
-    - Keep responses informative and pointwise, even for complex queries. If the answer is not known, say "I don't know" instead of making up information.
-    
+    You must output all text formatting using clean, valid HTML tags instead of Markdown. 
+    Only use the following structural and inline tags:
+    - Bold/Emphasis: <strong>text</strong> or <em>text</em>
+    - Headings: DO NOT USE HEADING TAGS. Instead, use <strong> or <em> for emphasis and structure.
+    - Lists: <ul>, <ol>, and <li> for bullet or numbered points
+    - Separation: <hr /> for horizontal rules
+    - Paragraphs: Wrap text block segments in <p>text</p> and use <br /> for single line breaks
+    - Tables: Use <table>, <tr>, <th>, and <td> for structured grid data
+    Do not use Markdown block quotes or symbols like **, ###, or - for bullets. Return raw HTML text directly.
     """
 )
 app = Flask(__name__)
