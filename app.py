@@ -267,8 +267,17 @@ def generate_ai_response(prompt):
     """
     # Quick, deterministic responses used during local development and demos.
     normalized_prompt = re.sub(r"[^a-z0-9\s]", " ", prompt.lower())
-    normalized_prompt = " ".join(normalized_prompt.split())
-    prompt_word_count = len(normalized_prompt.split())
+    prompt_words = normalized_prompt.split()
+    chat_word_map = {
+        "r": "are",
+        "u": "you",
+        "ur": "your",
+        "urs": "yours",
+        "ya": "you",
+    }
+    normalized_words = [chat_word_map.get(word, word) for word in prompt_words]
+    normalized_prompt = " ".join(normalized_words)
+    prompt_word_count = len(normalized_words)
 
     identity_exact = {
         "who are you",
@@ -277,6 +286,8 @@ def generate_ai_response(prompt):
         "what is your name",
         "what s your name",
         "whats your name",
+        "what is you name",
+        "whats you name",
         "tell me about yourself",
         "introduce yourself",
         "what should i call you",
