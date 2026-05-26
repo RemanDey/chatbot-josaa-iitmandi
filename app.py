@@ -276,7 +276,7 @@ def generate_ai_response(prompt):
         "ya": "you",
         "ge": "btech in general engineering",
         "ep": "btech in engineering physics",
-        "ee": "btech in electrical engineering:
+        "ee": "btech in electrical engineering"
     }
     normalized_words = [chat_word_map.get(word, word) for word in prompt_words]
     normalized_prompt = " ".join(normalized_words)
