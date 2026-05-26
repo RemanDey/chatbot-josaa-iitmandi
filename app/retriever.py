@@ -271,6 +271,10 @@ class HybridRetriever:
                 if any(kw in source for kw in ['fee_structure', 'hostel_rules', 'fees_faq']):
                     boost -= 0.5
                     
+            # Explicit preference to branch_overview_faq.md to ensure the full list of 16 branches is preferred
+            if "branch_overview_faq" in source:
+                boost += 0.8
+
             doc["metadata_boost"] = boost
             doc["boosted_score"] = doc["rrf_score"] + boost
             boosted_candidates.append(doc)
