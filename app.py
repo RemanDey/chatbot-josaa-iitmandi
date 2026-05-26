@@ -5,7 +5,7 @@ import requests
 from twilio.twiml.messaging_response import MessagingResponse
 from google import genai
 from google.genai import types
-
+import random
 # Basic module-level documentation:
 """
 Lightweight Flask webhook service for integrating WhatsApp/Telegram with an
@@ -55,8 +55,12 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
 # Create Flask app instance. When running under gunicorn, use the module name
 # target `app:app` so the WSGI server can import this object.
-API_KEY = os.getenv("GOOGLE_API_KEY")
-client = genai.Client(api_key=API_KEY)
+API_KEY_1 = os.getenv("GOOGLE_API_KEY_1")
+API_KEY_2 = os.getenv("GOOGLE_API_KEY_2")
+API_KEY_3 = os.getenv("GOOGLE_API_KEY_3")
+API_KEY_4 = os.getenv("GOOGLE_API_KEY_4")
+#API_KEY_5 = os.getenv("GOOGLE_API_KEY_5")
+
 
 grounding_tool = types.Tool(
     google_search=types.GoogleSearch()
@@ -250,8 +254,10 @@ def generate_api_response(prompt):
     both webhook and API responses, such as logging, metrics, or special
     formatting.
     """
+    key=random.choice([API_KEY_1, API_KEY_2, API_KEY_3, API_KEY_4])
+    client = genai.Client(api_key=key)
     response = client.models.generate_content(
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     contents=prompt,
     config=config,
     )
