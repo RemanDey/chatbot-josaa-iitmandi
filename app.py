@@ -339,7 +339,7 @@ def generate_ai_response(prompt):
     hardcoded_router = hardcoded_responses.hardcoded_responses("triggers.json")
     hardcoded_reply, bypassed = hardcoded_router.process_prompt(prompt)
     if bypassed:
-        return hardcoded_reply
+        return format_api_response(hardcoded_reply)
     # payload = {"query": prompt}
 
 
