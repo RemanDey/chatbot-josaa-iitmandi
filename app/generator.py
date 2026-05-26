@@ -610,57 +610,72 @@ SEMAPHORE = asyncio.Semaphore(5)
 
 class GeminiKeyManager:
     """
-    Manages active Gemini API keys with thread/async-safe asyncio.Lock,
-    instant key rotation on 429, and jittered cooldown intervals.
+    Manages active Gemini API keys with thread-safe threading.Lock,
+    instant key rotation on 429, and permanent disabling of leaked/blocked keys.
     """
     def __init__(self, primary: str, secondary: str, third: str):
+        import threading
         self.keys = []
         if primary and primary != "your_gemini_api_key_here":
-            self.keys.append({"label": "Primary", "key": primary, "cooldown_until": 0.0})
+            self.keys.append({"label": "Primary", "key": primary, "cooldown_until": 0.0, "is_leaked": False})
         if secondary and secondary != "your_gemini_second_api_key_here":
-            self.keys.append({"label": "Secondary", "key": secondary, "cooldown_until": 0.0})
+            self.keys.append({"label": "Secondary", "key": secondary, "cooldown_until": 0.0, "is_leaked": False})
         if third and third != "your_gemini_third_api_key_here":
-            self.keys.append({"label": "Third", "key": third, "cooldown_until": 0.0})
+            self.keys.append({"label": "Third", "key": third, "cooldown_until": 0.0, "is_leaked": False})
         self._current_idx = 0
-        self._lock = asyncio.Lock()
+        self._lock = threading.Lock()
 
-    async def get_available_key(self) -> Optional[dict]:
+    def get_available_key(self) -> Optional[dict]:
         """
-        Returns the first key that is not under active cooldown.
-        If all keys are on cooldown, returns the key that will become available soonest.
+        Returns the first key that is not leaked and not under active cooldown.
+        If all non-leaked keys are on cooldown, returns the key that will become available soonest.
         """
-        async with self._lock:
-            if not self.keys:
+        with self._lock:
+            # Filter non-leaked keys
+            active_keys = [k for k in self.keys if not k.get("is_leaked", False)]
+            if not active_keys:
                 return None
-            now = time.time()
-            n_keys = len(self.keys)
             
-            # 1. Try to find a key that is not on cooldown
+            now = time.time()
+            n_keys = len(active_keys)
+            
+            # 1. Try to find a non-leaked key that is not on cooldown
             for i in range(n_keys):
                 idx = (self._current_idx + i) % n_keys
-                key_info = self.keys[idx]
+                key_info = active_keys[idx]
                 if key_info["cooldown_until"] < now:
-                    self._current_idx = idx
+                    # Update next index for round-robin rotation
+                    self._current_idx = (self.keys.index(key_info) + 1) % len(self.keys)
                     return key_info
             
             # 2. If all are on cooldown, select the one with the smallest cooldown_until
-            least_cooldown_key = min(self.keys, key=lambda k: k["cooldown_until"])
+            least_cooldown_key = min(active_keys, key=lambda k: k["cooldown_until"])
             logger.warning(
-                "All Gemini API keys are currently on cooldown! Selecting the least cooled down key: %s (remaining cooldown: %.1fs)", 
+                "All non-leaked Gemini API keys are currently on cooldown! Selecting: %s (remaining cooldown: %.1fs)", 
                 least_cooldown_key["label"], 
                 least_cooldown_key["cooldown_until"] - now
             )
             return least_cooldown_key
 
-    async def handle_429(self, key_label: str):
+    def handle_429(self, key_label: str):
         """Puts a key on jittered cooldown (120s + jitter) and rotates to the next index."""
-        async with self._lock:
+        with self._lock:
             now = time.time()
             cooldown_duration = 120.0 + random.randint(0, 30)
             for key_info in self.keys:
                 if key_info["label"] == key_label:
                     key_info["cooldown_until"] = now + cooldown_duration
                     logger.warning("Gemini Key %s put on jittered cooldown for %.1f seconds due to 429.", key_label, cooldown_duration)
+            if self.keys:
+                self._current_idx = (self._current_idx + 1) % len(self.keys)
+
+    def handle_403(self, key_label: str):
+        """Permanently marks a key as leaked/blocked so it is never used again."""
+        with self._lock:
+            for key_info in self.keys:
+                if key_info["label"] == key_label:
+                    key_info["is_leaked"] = True
+                    logger.critical("Gemini Key %s reported as LEAKED or BLOCKED (403). Permanently disabled.", key_label)
             if self.keys:
                 self._current_idx = (self._current_idx + 1) % len(self.keys)
 
@@ -843,28 +858,42 @@ class RAGGenerator:
         self._groq_bypass_until = 0.0
 
     def _call_google_genai(self, combined_prompt: str) -> str:
-        """Call Gemini model with Search Grounding using Google GenAI SDK."""
-        API_KEY_1 = self.gemini_api_key
-        API_KEY_2 = self.gemini_second_api_key
-        API_KEY_3 = self.gemini_third_api_key
-        API_KEY_4 = ""
-        API_KEY_FALLBACK = ""
+        """Call Gemini model with Search Grounding using Google GenAI SDK, with auto-retry on 429/403."""
         GOOGLE_MODEL = "gemini-2.5-flash"
-
-        available_keys = [
-            k for k in [API_KEY_1, API_KEY_2, API_KEY_3, API_KEY_4, API_KEY_FALLBACK] if k
-        ]
-        if not available_keys:
-            raise RuntimeError("Missing GOOGLE_API_KEY / GOOGLE_API_KEY_1..4")
         
-        key = random.choice(available_keys)
-        client = genai.Client(api_key=key)
-        response = client.models.generate_content(
-            model=GOOGLE_MODEL,
-            contents=combined_prompt,
-            config=config,
-        )
-        return response.text or ""
+        # Retry up to the number of available keys
+        max_retries = len(self.key_manager.keys)
+        for attempt in range(max_retries):
+            key_info = self.key_manager.get_available_key()
+            if not key_info:
+                logger.error("No working Gemini keys available!")
+                break
+                
+            key = key_info["key"]
+            label = key_info["label"]
+            
+            try:
+                client = genai.Client(api_key=key)
+                response = client.models.generate_content(
+                    model=GOOGLE_MODEL,
+                    contents=combined_prompt,
+                    config=config,
+                )
+                return response.text or ""
+            except Exception as e:
+                err_msg = str(e).lower()
+                if "429" in err_msg or "quota" in err_msg or "rate limit" in err_msg:
+                    logger.warning("Gemini API call returned 429 for key %s. Rotating...", label)
+                    self.key_manager.handle_429(label)
+                elif "403" in err_msg or "leaked" in err_msg or "permission" in err_msg:
+                    logger.critical("Gemini API key %s reported as leaked or blocked (403). Rotating...", label)
+                    self.key_manager.handle_403(label)
+                else:
+                    logger.warning("Gemini API call failed with key %s: %s", label, e)
+                    # Put it on a brief cooldown to avoid immediate reuse
+                    self.key_manager.handle_429(label)
+                    
+        raise RuntimeError("All configured Gemini API keys failed during generation.")
 
     def _call_llm(self, messages: list) -> Optional[str]:
         """Core LLM call handler with Groq primary and multiple fallbacks (Gemini, OpenRouter, DeepSeek, Nvidia, Hugging Face)."""
@@ -1076,32 +1105,44 @@ Documents:
             "]"
         )
 
-        API_KEY_1 = self.gemini_api_key
-        API_KEY_2 = self.gemini_second_api_key
-        API_KEY_3 = self.gemini_third_api_key
-        available_keys = [k for k in [API_KEY_1, API_KEY_2, API_KEY_3] if k]
-        
-        if not available_keys:
-            logger.info("No Gemini API keys configured. Skipping Gemini web search.")
-            return []
-
         def _run_search():
-            key = random.choice(available_keys)
-            client = genai.Client(api_key=key)
-            
-            search_config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-                temperature=0.1,
-                max_output_tokens=1500,
-            )
-            
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=f"Search the web and extract atomic factual claims for: {query}",
-                config=search_config,
-            )
-            return response
+            max_retries = len(self.key_manager.keys)
+            for attempt in range(max_retries):
+                key_info = self.key_manager.get_available_key()
+                if not key_info:
+                    logger.error("No working Gemini keys available for web search!")
+                    break
+                    
+                key = key_info["key"]
+                label = key_info["label"]
+                
+                try:
+                    client = genai.Client(api_key=key)
+                    search_config = types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        tools=[types.Tool(google_search=types.GoogleSearch())],
+                        temperature=0.1,
+                        max_output_tokens=1500,
+                    )
+                    
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=f"Search the web and extract atomic factual claims for: {query}",
+                        config=search_config,
+                    )
+                    return response
+                except Exception as e:
+                    err_msg = str(e).lower()
+                    if "429" in err_msg or "quota" in err_msg or "rate limit" in err_msg:
+                        logger.warning("Gemini API call returned 429 for key %s. Rotating...", label)
+                        self.key_manager.handle_429(label)
+                    elif "403" in err_msg or "leaked" in err_msg or "permission" in err_msg:
+                        logger.critical("Gemini API key %s reported as leaked or blocked (403). Rotating...", label)
+                        self.key_manager.handle_403(label)
+                    else:
+                        logger.warning("Gemini API call failed with key %s: %s", label, e)
+                        self.key_manager.handle_429(label)
+            raise RuntimeError("All configured Gemini API keys failed during web search.")
 
         try:
             response = await asyncio.to_thread(_run_search)
@@ -1329,9 +1370,12 @@ Documents:
 
         # ── Step 2: Aspect-Based Retrieval & Claim Extraction ────────────
         # A. Extract RAG Claims
-        skip_rag_llm = query_class in ["branch_overview", "comparison_query", "software_transition"]
+        skip_rag_llm = (
+            query_class in ["branch_overview", "comparison_query", "software_transition"] or
+            any(w in query_stripped.lower() for w in ["branch", "program", "course", "department", "offer"])
+        )
         if skip_rag_llm:
-            logger.info("Strong-match query type '%s' detected. Bypassing RAG dynamic LLM claim extraction.", query_class)
+            logger.info("Strong-match branch/program query detected. Bypassing RAG dynamic LLM claim extraction to preserve all raw document details.")
             rag_claims = self._chunks_to_claims(confident_chunks)
         else:
             rag_claims = await self.extract_rag_claims(confident_chunks)
@@ -1369,8 +1413,12 @@ Documents:
                     
             if entities_to_fetch:
                 now = time.time()
-                active_keys = [k for k in self.key_manager.keys if k["cooldown_until"] < now]
-                if not active_keys and self.key_manager.keys:
+                active_keys = [
+                    k for k in self.key_manager.keys 
+                    if k["cooldown_until"] < now and not k.get("is_leaked", False)
+                ]
+                non_leaked_keys = [k for k in self.key_manager.keys if not k.get("is_leaked", False)]
+                if not active_keys and non_leaked_keys:
                     logger.warning("Degraded Mode Triggered: All Gemini keys are currently cooling down!")
                     degraded_mode = True
                 else:
