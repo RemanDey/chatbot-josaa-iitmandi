@@ -12,15 +12,8 @@ env/
 # Local configuration and environment keys
 .env
 
-# Raw data files (keep source KB docs, ignore generated databases)
-data/raw/*
-!data/raw/new/
-!data/raw/new/**
-
-# Generated retrieval artifacts
-data/chroma_db/
-data/bm25_corpus.pkl
-data/web_cache.db
+# Raw data files (Git ignored; compiled databases below are tracked for deployment)
+data/raw/
 
 # Dynamic query response caches (keeps cache private/local)
 data/cache.db
