@@ -14,9 +14,6 @@ logs
 data/raw/*
 !data/raw/new/
 !data/raw/new/**
-data/chroma_db/
-data/bm25_corpus.pkl
-data/web_cache.db
 data/cache.db
 evals/results.json
 .DS_Store
