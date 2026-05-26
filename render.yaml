@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: chatbot-josaa-iitmandi-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: EAGER_LOAD_MODELS
+        value: "false"
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://chatbot-josaa-iitmandi.onrender.com
+      - key: CHROMA_DB_PATH
+        value: data/chroma_db
+      - key: CHROMA_COLLECTION_NAME
+        value: iitmandi
+      - key: BM25_PICKLE_FILE
+        value: data/bm25_corpus.pkl
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: HF_TOKEN
+        sync: false
+      - key: WARMUP_TOKEN
+        sync: false

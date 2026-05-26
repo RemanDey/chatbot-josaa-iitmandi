@@ -1,0 +1,5 @@
+# No Git LFS rules in this branch. Generated retrieval artifacts are rebuilt at image build time.
+*.pkl filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.sqlite3 filter=lfs diff=lfs merge=lfs -text
+*.db filter=lfs diff=lfs merge=lfs -text
