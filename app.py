@@ -60,19 +60,19 @@ AI_BACKEND_URL = os.getenv(
 HOISTED_FRONTEND_URL = os.getenv(
         "HOISTED_FRONTEND_URL", "https://chatbot-josaa-iitmandi.onrender.com/"
 )
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN","remandey")
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
 # Create Flask app instance. When running under gunicorn, use the module name
 # target `app:app` so the WSGI server can import this object.
-API_KEY_1 = os.getenv("GOOGLE_API_KEY_1")
-API_KEY_2 = os.getenv("GOOGLE_API_KEY_2")
-API_KEY_3 = os.getenv("GOOGLE_API_KEY_3")
-API_KEY_4 = os.getenv("GOOGLE_API_KEY_4")
-API_KEY_FALLBACK = os.getenv("GOOGLE_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
-CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
+API_KEY_1 = os.getenv("GOOGLE_API_KEY_1","reman_dey")
+API_KEY_2 = os.getenv("GOOGLE_API_KEY_2","remn_dey_2")
+API_KEY_3 = os.getenv("GOOGLE_API_KEY_3","remn_dey_3")
+API_KEY_4 = os.getenv("GOOGLE_API_KEY_4","remn_dey_4")
+API_KEY_FALLBACK = os.getenv("GOOGLE_API_KEY","remn_dey_fallback")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY","remn_groq")
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY","remn_mistral")
+CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY","remn_cerebras")
 GOOGLE_MODEL = os.getenv("GOOGLE_MODEL", "gemini-2.5-flash")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
