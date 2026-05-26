@@ -1,5 +1,13 @@
 import os
+import re
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+from typing import Callable
+
+from cache import get_cached, set_cached
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 import requests
 from twilio.twiml.messaging_response import MessagingResponse
@@ -43,10 +51,12 @@ Security and production notes:
 load_dotenv()
 
 # Configuration (read from environment in production deployments):
-# - AI_BACKEND_URL: URL of the AI service used to generate responses. Required.
+# - AI_BACKEND_URL: Aryan RAG backend URL used as grounded context for Gemini.
 # - HOISTED_FRONTEND_URL: Optional front-end location for links returned to users.
 # - BOT_TOKEN: Telegram bot token. Only required if using the Telegram webhook.
-AI_BACKEND_URL = "https://aryanraj1092-iitmandi-bot.hf.space/api/chat"
+AI_BACKEND_URL = os.getenv(
+    "AI_BACKEND_URL", "https://aryanraj1092-iitmandi-bot.hf.space/api/chat"
+)
 HOISTED_FRONTEND_URL = os.getenv(
         "HOISTED_FRONTEND_URL", "https://chatbot-josaa-iitmandi.onrender.com/"
 )
@@ -59,6 +69,17 @@ API_KEY_1 = os.getenv("GOOGLE_API_KEY_1")
 API_KEY_2 = os.getenv("GOOGLE_API_KEY_2")
 API_KEY_3 = os.getenv("GOOGLE_API_KEY_3")
 API_KEY_4 = os.getenv("GOOGLE_API_KEY_4")
+API_KEY_FALLBACK = os.getenv("GOOGLE_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
+CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
+GOOGLE_MODEL = os.getenv("GOOGLE_MODEL", "gemini-2.5-flash")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
+CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
+FALLBACK_PROVIDER_ORDER = os.getenv(
+    "FALLBACK_PROVIDER_ORDER", "google,groq,cerebras,mistral"
+)
 #API_KEY_5 = os.getenv("GOOGLE_API_KEY_5")
 
 
@@ -83,6 +104,36 @@ app = Flask(__name__)
 # Session / debug configuration
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-me-in-prod")
 DEBUG_PASSWORD = os.getenv("DEBUG_PASSWORD", "debugpass")
+
+# Default IP-based limits protect public web/debug-adjacent traffic from bursts
+# while keeping the backend dependency-free for Render's simple deployment model.
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per hour"],
+    storage_uri="memory://",
+)
+
+# Cap concurrent Gemini waits so slow upstream calls cannot exhaust the gevent
+# worker indefinitely; requests get a graceful fallback after 30 seconds.
+GENAI_TIMEOUT_SECONDS = 30
+RAG_TIMEOUT_SECONDS = 15
+CHAT_COMPLETIONS_TIMEOUT_SECONDS = 20
+GENAI_TIMEOUT_REPLY = "I'm taking too long to respond right now. Please try again in a moment."
+GENAI_ERROR_REPLY = "Something went wrong. Please try again."
+_executor = ThreadPoolExecutor(max_workers=10)
+
+
+def _whatsapp_sender_key():
+    # Limit by WhatsApp sender so one noisy number cannot consume every IP quota.
+    return request.values.get("From") or get_remote_address()
+
+
+def _telegram_chat_key():
+    # Limit by Telegram chat_id because many webhook calls can share one proxy IP.
+    telegram_data = request.get_json(silent=True) or {}
+    chat_id = telegram_data.get("message", {}).get("chat", {}).get("id")
+    return str(chat_id or get_remote_address())
 
 
 def _debug_is_authenticated():
@@ -115,6 +166,7 @@ def debug():
     return render_template("debug.html")
 
 @app.route("/telegram", methods=["POST"])
+@limiter.limit("10 per minute", key_func=_telegram_chat_key)
 def telegram_webhook():
     """Receive Telegram webhook POSTs from the Bot API.
 
@@ -144,8 +196,9 @@ def telegram_webhook():
     if "@josaa_iitmandi_bot" in incoming_text:
         cleaned_prompt = incoming_text.replace("@josaa_iitmandi_bot", "").strip()
 
-        # TODO: replace placeholder reply with the real AI call (generate_ai_response)
-        ai_reply = f"Reman and Aryan's hehe  Response to '{cleaned_prompt}'"
+        # Reuse the same AI path as web/WhatsApp so Telegram gets caching,
+        # timeout handling, and consistent JoSAA answers.
+        ai_reply = generate_ai_response(cleaned_prompt)
 
         payload = {
             "chat_id": chat_id,
@@ -165,6 +218,7 @@ def telegram_webhook():
     return "OK", 200
 
 @app.route("/whatsapp", methods=["POST"])
+@limiter.limit("10 per minute", key_func=_whatsapp_sender_key)
 def whatsapp_webhook():
     """Handle incoming messages forwarded via Twilio's webhook.
 
@@ -198,6 +252,12 @@ def about():
     return render_template("about.html")
 
 
+@app.route("/health", methods=["GET"])
+def health():
+    """Return a minimal probe response for Render/load balancer health checks."""
+    return jsonify({"status": "ok", "timestamp": int(time.time())}), 200
+
+
 def generate_ai_response(prompt):
     """Query the AI backend and return the text reply.
 
@@ -206,6 +266,39 @@ def generate_ai_response(prompt):
     - If response.raise_for_status() triggers, inspect backend logs and status code.
     """
     # Quick, deterministic responses used during local development and demos.
+    normalized_prompt = re.sub(r"[^a-z0-9\s]", " ", prompt.lower())
+    normalized_prompt = " ".join(normalized_prompt.split())
+    prompt_word_count = len(normalized_prompt.split())
+
+    identity_exact = {
+        "who are you",
+        "who r you",
+        "what are you",
+        "what is your name",
+        "what s your name",
+        "whats your name",
+        "tell me about yourself",
+        "introduce yourself",
+        "what should i call you",
+    }
+    identity_contains = {
+        "your name",
+        "about yourself",
+        "are you gemini",
+        "are you google",
+        "built by google",
+        "trained by google",
+        "who made you",
+    }
+    if (
+        normalized_prompt in identity_exact
+        or (
+            prompt_word_count <= 12
+            and any(phrase in normalized_prompt for phrase in identity_contains)
+        )
+    ):
+        return "I am chat bot JoSAA assistant for IIT Mandi."
+
     if prompt == "ps":
         return "Reman Loves To Solve PS:)hehe"
     if " hi " in prompt.lower() or " hello " in prompt.lower():
@@ -217,6 +310,12 @@ def generate_ai_response(prompt):
             "Visit his portfolio at remandey.github.io/my-portfolio . "
         )
 
+    # Cache after deterministic shortcuts so repeated admissions questions reuse
+    # a processed answer without changing demo/debug special cases.
+    cached_reply = get_cached(prompt)
+    if cached_reply is not None:
+        return cached_reply
+
     # payload = {"query": prompt}
 
 
@@ -224,6 +323,10 @@ def generate_ai_response(prompt):
     # processessed_reply = format_ai_response(response)
     raw_reply = generate_api_response(prompt)
     processessed_reply = format_api_response(raw_reply)
+    # Avoid caching transient upstream failures, otherwise a single timeout could
+    # serve the same apology for a common question for the full one-hour TTL.
+    if processessed_reply not in {GENAI_TIMEOUT_REPLY, GENAI_ERROR_REPLY}:
+        set_cached(prompt, processessed_reply)
     return processessed_reply
 
 def format_ai_response(raw_response):
@@ -247,6 +350,173 @@ def format_api_response(raw_response):
     # additional formatting logic here if needed.
     clean_response = raw_response.replace("*","")
     return clean_response
+
+
+def _call_aryan_rag(prompt):
+    # Aryan's RAG backend supplies JoSAA-specific context; Gemini then blends it
+    # with search-grounded reasoning into one answer instead of competing replies.
+    response = requests.post(
+        AI_BACKEND_URL,
+        json={"query": prompt},
+        timeout=RAG_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    return format_ai_response(response)
+
+
+def _build_combined_prompt(prompt):
+    """Build a single prompt with optional RAG context."""
+    rag_answer = ""
+    try:
+        rag_answer = _call_aryan_rag(prompt)
+    except Exception as e:
+        app.logger.warning("Aryan RAG backend unavailable: %s", e)
+
+    if rag_answer:
+        combined_prompt = (
+            "User question:\n"
+            f"{prompt}\n\n"
+            "Aryan RAG answer/context:\n"
+            f"{rag_answer}\n\n"
+            "Create one combined JoSAAssist answer. Use Aryan RAG as grounded "
+            "admissions context, use Google Search when fresher official IIT "
+            "Mandi or JoSAA information is needed, resolve conflicts clearly, "
+            "and keep the response concise and pointwise."
+        )
+    return prompt
+
+
+def _extract_chat_completion_text(data):
+    choices = data.get("choices") or []
+    if not choices:
+        raise RuntimeError("No choices in provider response")
+
+    message = choices[0].get("message") or {}
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        text_parts = []
+        for chunk in content:
+            if isinstance(chunk, dict) and isinstance(chunk.get("text"), str):
+                text_parts.append(chunk["text"])
+        if text_parts:
+            return "\n".join(text_parts)
+
+    raise RuntimeError("Provider response did not include textual content")
+
+
+def _call_google_genai(combined_prompt):
+    available_keys = [
+        k for k in [API_KEY_1, API_KEY_2, API_KEY_3, API_KEY_4, API_KEY_FALLBACK] if k
+    ]
+    if not available_keys:
+        raise RuntimeError("Missing GOOGLE_API_KEY / GOOGLE_API_KEY_1..4")
+
+    key = random.choice(available_keys)
+    client = genai.Client(api_key=key)
+    response = client.models.generate_content(
+        model=GOOGLE_MODEL,
+        contents=combined_prompt,
+        config=config,
+    )
+    return response.text or ""
+
+
+def _call_openai_compatible_chat(*, endpoint, api_key, model, combined_prompt):
+    if not api_key:
+        raise RuntimeError("Missing API key")
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": config.system_instruction},
+            {"role": "user", "content": combined_prompt},
+        ],
+        "temperature": 0.2,
+    }
+    response = requests.post(
+        endpoint,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=CHAT_COMPLETIONS_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    return _extract_chat_completion_text(response.json())
+
+
+def _call_groq(combined_prompt):
+    return _call_openai_compatible_chat(
+        endpoint="https://api.groq.com/openai/v1/chat/completions",
+        api_key=GROQ_API_KEY,
+        model=GROQ_MODEL,
+        combined_prompt=combined_prompt,
+    )
+
+
+def _call_cerebras(combined_prompt):
+    return _call_openai_compatible_chat(
+        endpoint="https://api.cerebras.ai/v1/chat/completions",
+        api_key=CEREBRAS_API_KEY,
+        model=CEREBRAS_MODEL,
+        combined_prompt=combined_prompt,
+    )
+
+
+def _call_mistral(combined_prompt):
+    return _call_openai_compatible_chat(
+        endpoint="https://api.mistral.ai/v1/chat/completions",
+        api_key=MISTRAL_API_KEY,
+        model=MISTRAL_MODEL,
+        combined_prompt=combined_prompt,
+    )
+
+
+def _available_provider_callables():
+    provider_map: dict[str, Callable[[str], str]] = {
+        "google": _call_google_genai,
+        "groq": _call_groq,
+        "cerebras": _call_cerebras,
+        "mistral": _call_mistral,
+    }
+    return provider_map
+
+
+def _provider_chain():
+    provider_map = _available_provider_callables()
+    providers = []
+    for name in [p.strip().lower() for p in FALLBACK_PROVIDER_ORDER.split(",") if p.strip()]:
+        if name in provider_map and name not in providers:
+            providers.append(name)
+    if not providers:
+        providers = ["google", "groq", "cerebras", "mistral"]
+    return providers
+
+
+def _call_with_provider_fallback(prompt):
+    combined_prompt = _build_combined_prompt(prompt)
+    providers = _provider_chain()
+    provider_map = _available_provider_callables()
+    errors = []
+
+    for provider in providers:
+        try:
+            reply = provider_map[provider](combined_prompt).strip()
+            if reply:
+                app.logger.info("LLM provider success: %s", provider)
+                return reply
+            raise RuntimeError("Empty response text")
+        except Exception as e:
+            errors.append(f"{provider}: {e}")
+            app.logger.warning("LLM provider failed (%s): %s", provider, e)
+
+    raise RuntimeError("All providers failed -> " + " | ".join(errors))
+
+
 def generate_api_response(prompt):
     """Generate a response for API requests from Google GenAI.
 
@@ -254,16 +524,20 @@ def generate_api_response(prompt):
     both webhook and API responses, such as logging, metrics, or special
     formatting.
     """
-    key=random.choice([API_KEY_1, API_KEY_2, API_KEY_3, API_KEY_4])
-    client = genai.Client(api_key=key)
-    response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents=prompt,
-    config=config,
-    )
+    # Keep external LLM calls in a worker thread so we can enforce a hard timeout.
+    future = _executor.submit(_call_with_provider_fallback, prompt)
+    try:
+        return future.result(timeout=GENAI_TIMEOUT_SECONDS)
+    except FuturesTimeout:
+        future.cancel()
+        app.logger.warning("LLM timeout after %s seconds", GENAI_TIMEOUT_SECONDS)
+        return GENAI_TIMEOUT_REPLY
+    except Exception as e:
+        app.logger.error("LLM error: %s", e)
+        return GENAI_ERROR_REPLY
 
-    return response.text
 @app.route("/app", methods=["POST"])
+@limiter.limit("20 per minute")
 def web_app_response():
     """Return a JSON response for browser-based requests.
 

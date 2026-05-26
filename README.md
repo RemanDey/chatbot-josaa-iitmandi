@@ -45,11 +45,24 @@ HOISTED_FRONTEND_URL=https://your-frontend.example.com/
 # Optional / Debug UI (use only in development or behind a secure network)
 FLASK_SECRET_KEY=replace-with-a-random-secret
 DEBUG_PASSWORD=your_debug_password
+# LLM providers (Google + fallbacks)
+GOOGLE_API_KEY=your_google_key
+GROQ_API_KEY=your_groq_key
+CEREBRAS_API_KEY=your_cerebras_key
+MISTRAL_API_KEY=your_mistral_key
+# Optional model overrides
+GOOGLE_MODEL=gemini-2.5-flash
+GROQ_MODEL=llama-3.1-8b-instant
+CEREBRAS_MODEL=gpt-oss-120b
+MISTRAL_MODEL=mistral-small-latest
+# Optional fallback order
+FALLBACK_PROVIDER_ORDER=google,groq,cerebras,mistral
 ```
 
 Notes:
 - `AI_BACKEND_URL` is currently set inside `app.py`. You can move it into an environment variable if you prefer.
 - `FLASK_SECRET_KEY` is used to secure session cookies for the `/debug` login. Set a long random value in production.
+- LLM fallback uses providers in `FALLBACK_PROVIDER_ORDER` and skips to the next provider if one fails.
 
 ## Local Development
 
