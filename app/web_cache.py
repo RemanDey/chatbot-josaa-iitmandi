@@ -10,8 +10,13 @@ logger = logging.getLogger("web_cache")
 class WebCache:
     def __init__(self, db_path: str = "data/web_cache.db"):
         self.db_path = db_path
+        self._initialized = False
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self.ensure_initialized()
+
+    def ensure_initialized(self) -> None:
         self._init_db()
+        self._initialized = True
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -128,7 +133,13 @@ class WebCache:
         now_str = now.isoformat()
         expires_at_str = expires_at.isoformat()
         
-        claims_json = json.dumps(extracted_claims or [])
+        claims_list = []
+        if extracted_claims:
+            for c in extracted_claims:
+                if c.get("origin") == "rag":
+                    continue
+                claims_list.append(c)
+        claims_json = json.dumps(claims_list)
         categories_json = json.dumps(categories or [])
         
         with sqlite3.connect(self.db_path) as conn:
@@ -144,3 +155,24 @@ class WebCache:
             ))
             conn.commit()
             logger.info("Cached query '%s' of type '%s' (expires in %s)", query, query_type, ttl)
+
+    def clear(self) -> int:
+        """Clear all cached entries."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM gemini_web_cache")
+            deleted_rows = cursor.rowcount
+            conn.commit()
+        logger.info("Cleared all web cache entries. Evicted %d rows.", deleted_rows)
+        return deleted_rows
+
+    def cleanup_expired_web_claims(self) -> int:
+        """Delete all expired entries from cache."""
+        now_str = datetime.now(timezone.utc).isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM gemini_web_cache WHERE expires_at < ?", (now_str,))
+            deleted = cursor.rowcount
+            conn.commit()
+        logger.info("Daily cleanup of web cache complete. Deleted %d expired entries.", deleted)
+        return deleted

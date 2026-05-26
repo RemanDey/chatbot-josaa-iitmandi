@@ -36,7 +36,8 @@ from app.retriever import retriever
 from app.reranker import reranker
 from app.confidence import confidence_scorer
 from app.generator import generate_answer, decompose_query, generator, classify_query_rich
-from app.cache import cache
+from app.web_cache import WebCache
+cache = WebCache()
 from app.observe import log_query_event, log_telemetry
 from app.config import settings
 

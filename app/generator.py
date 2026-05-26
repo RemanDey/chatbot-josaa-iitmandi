@@ -10,7 +10,24 @@ from typing import List, Dict, Any, Optional
 
 import httpx
 from app.config import settings
-from app.cache import cache
+from google import genai
+from google.genai import types
+
+grounding_tool = types.Tool(
+    google_search=types.GoogleSearch()
+)
+
+config = types.GenerateContentConfig(
+    tools=[grounding_tool],
+    system_instruction="""You are a helpful assistant for answering questions about IIT Mandi and JOSAA admissions.
+Visit IIT Mandi official Website and Use the Google Search tool to find up-to-date information when needed, and provide clear, concise answers to user queries.
+You must adhere to these strict formatting rules:
+- Never return a dense wall of text.
+- Use bold text (**key phrase**) at the start of lines to create visual anchors.
+- Use bullet points for features/lists, and numbered lists ONLY for sequential steps.
+- Keep responses informative and pointwise, even for complex queries. If the answer is not known, say "I don't know" instead of making up information.
+"""
+)
 
 logger = logging.getLogger("generator")
 
@@ -213,7 +230,7 @@ def classify_query_rich(query: str) -> dict:
         "me": ["me", "mechanical", "mechanics"],
         "ce": ["ce", "civil"],
         "ep": ["ep", "physics", "engineering physics"],
-        "dse": ["dse", "data science"],
+        "ds": ["dse", "data science"],
         "mnc": ["mnc", "math", "mathematics"]
     }
     
@@ -405,7 +422,7 @@ def verify_claim(claim: dict, current_year: Optional[int] = None) -> dict:
             val_float = float(val)
             category = claim.get("category", "")
             # placement_rate > 100
-            if (unit == "%" or "placement" in category) and val_float > 100.0:
+            if unit == "%" and val_float > 100.0:
                 claim["rejected"] = True
                 logger.warning("Sanity Check: Rejected placement percentage %.2f (> 100%%)", val_float)
             # invalid negative metrics
@@ -825,6 +842,30 @@ class RAGGenerator:
         self._groq_fail_count = 0
         self._groq_bypass_until = 0.0
 
+    def _call_google_genai(self, combined_prompt: str) -> str:
+        """Call Gemini model with Search Grounding using Google GenAI SDK."""
+        API_KEY_1 = self.gemini_api_key
+        API_KEY_2 = self.gemini_second_api_key
+        API_KEY_3 = self.gemini_third_api_key
+        API_KEY_4 = ""
+        API_KEY_FALLBACK = ""
+        GOOGLE_MODEL = "gemini-2.5-flash"
+
+        available_keys = [
+            k for k in [API_KEY_1, API_KEY_2, API_KEY_3, API_KEY_4, API_KEY_FALLBACK] if k
+        ]
+        if not available_keys:
+            raise RuntimeError("Missing GOOGLE_API_KEY / GOOGLE_API_KEY_1..4")
+        
+        key = random.choice(available_keys)
+        client = genai.Client(api_key=key)
+        response = client.models.generate_content(
+            model=GOOGLE_MODEL,
+            contents=combined_prompt,
+            config=config,
+        )
+        return response.text or ""
+
     def _call_llm(self, messages: list) -> Optional[str]:
         """Core LLM call handler with Groq primary and multiple fallbacks (Gemini, OpenRouter, DeepSeek, Nvidia, Hugging Face)."""
         # 1. Groq (Primary)
@@ -860,52 +901,16 @@ class RAGGenerator:
 
         # 2. Gemini 2.5 Flash (Fallback 1 - High reliability & rate limit)
         try:
-            active_key = None
-            if self.key_manager.keys:
-                for k in self.key_manager.keys:
-                    if k["cooldown_until"] < now:
-                        active_key = k
-                        break
-                if not active_key:
-                    active_key = self.key_manager.keys[0]
-            if active_key:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={active_key['key']}"
-                prompt_parts = []
-                for msg in messages:
-                    if msg["role"] in ["system", "user"]:
-                        prompt_parts.append(msg["content"])
-                combined_prompt = "\n\n".join(prompt_parts)
-                
-                payload = {
-                    "contents": [{
-                        "parts": [{"text": combined_prompt}]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.1,
-                        "maxOutputTokens": 1500,
-                        "thinkingConfig": {
-                            "thinkingBudget": 0
-                        }
-                    }
-                }
-                with httpx.Client(timeout=15.0) as client:
-                    response = client.post(url, json=payload)
-                    if response.status_code == 429:
-                        active_key["cooldown_until"] = now + 120.0
-                        logger.warning("Gemini Key %s rate limited (429 status). Putting on cooldown for 120s.", active_key["label"])
-                        response.raise_for_status()
-                    response.raise_for_status()
-                    res_data = response.json()
-                    candidates = res_data.get("candidates", [])
-                    if candidates:
-                        content = candidates[0].get("content", {})
-                        parts = content.get("parts", [])
-                        if parts:
-                            return parts[0].get("text", "").strip()
+            prompt_parts = []
+            for msg in messages:
+                if msg["role"] in ["system", "user"]:
+                    prompt_parts.append(msg["content"])
+            combined_prompt = "\n\n".join(prompt_parts)
+            
+            res_text = self._call_google_genai(combined_prompt)
+            if res_text:
+                return res_text.strip()
         except Exception as e:
-            if hasattr(e, "response") and e.response is not None and e.response.status_code == 429:
-                active_key["cooldown_until"] = now + 120.0
-                logger.warning("Gemini Key %s rate limited (HTTPStatusError 429). Putting on cooldown for 120s.", active_key["label"])
             logger.warning("Gemini synthesis fallback failed: %s. Trying OpenRouter fallback...", e)
 
         # 2. OpenRouter (Fallback 1)
@@ -1050,9 +1055,8 @@ Documents:
             c["origin"] = "rag"
         return claims
 
-
     async def extract_web_claims(self, query: str) -> List[Dict[str, Any]]:
-        """Web Claims Extractor: Uses Gemini 2.5 Flash with search grounding to fetch and extract web claims."""
+        """Web Claims Extractor: Uses Google GenAI SDK with Search Grounding to fetch and extract web claims."""
         system_instruction = (
             "You are a JOSAA counseling intelligence agent. Actively use Google Search to retrieve "
             "the latest, fresh facts and statistics about branches and programs at IIT Mandi from the web. "
@@ -1069,89 +1073,63 @@ Documents:
             "  }\n"
             "]"
         )
+
+        API_KEY_1 = self.gemini_api_key
+        API_KEY_2 = self.gemini_second_api_key
+        API_KEY_3 = self.gemini_third_api_key
+        available_keys = [k for k in [API_KEY_1, API_KEY_2, API_KEY_3] if k]
         
-        payload = {
-            "systemInstruction": {
-                "parts": [{"text": system_instruction}]
-            },
-            "contents": [{
-                "parts": [{"text": f"Search the web and extract atomic factual claims for: {query}"}]
-            }],
-            "tools": [{"google_search": {}}],
-            "generationConfig": {
-                "temperature": 0.1,
-                "maxOutputTokens": 1500,
-                "thinkingConfig": {
-                    "thinkingBudget": 0
-                }
-            }
-        }
-        
-        # Get maximum attempts matching configured keys
-        max_attempts = len(self.key_manager.keys)
-        if max_attempts == 0:
+        if not available_keys:
             logger.info("No Gemini API keys configured. Skipping Gemini web search.")
             return []
-            
-        for attempt in range(max_attempts):
-            key_info = await self.key_manager.get_available_key()
-            if not key_info:
-                logger.warning("No Gemini API keys available.")
-                break
-                
-            key_label = key_info["label"]
-            api_key = key_info["key"]
-            url = f"{self.gemini_api_url}?key={api_key}"
-            
-            logger.info("Attempting Gemini web search using %s API key...", key_label)
-            
-            try:
-                async with httpx.AsyncClient(timeout=25.0) as client:
-                    async with SEMAPHORE:
-                        response = await client.post(url, json=payload)
-                        
-                    if response.status_code in [429, 500, 502, 503, 504]:
-                        logger.warning("%s Gemini API returned %d. Rotating key immediately.", key_label, response.status_code)
-                        await self.key_manager.handle_429(key_label)
-                        continue  # Rotate immediately next loop iteration
-                        
-                    response.raise_for_status()
-                    data = response.json()
-                    
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        # Extract search grounding metadata URLs
-                        grounding = candidates[0].get("groundingMetadata", {})
-                        chunks = grounding.get("groundingChunks", [])
-                        urls = [ch.get("web", {}).get("uri") for ch in chunks if ch.get("web", {}).get("uri")]
-                        source_url = urls[0] if urls else "https://www.iitmandi.ac.in"
 
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts:
-                            text = parts[0].get("text", "").strip()
-                            claims = parse_json_array(text)
-                            
-                            for idx, c in enumerate(claims):
-                                c["claim_id"] = f"claim_web_{idx}_{int(time.time())}"
-                                c["source_type"] = "Web Search"
-                                c["origin"] = "web"
-                                c["source_url"] = source_url
-                                if "source_name" not in c or not c["source_name"]:
-                                    c["source_name"] = "Gemini Google Search"
-                            logger.info("Successfully extracted %d claims from %s Gemini Web Search with source URL: %s", len(claims), key_label, source_url)
-                            return claims
-                    break  # Exit on success or no candidates
-            except httpx.HTTPStatusError as hse:
-                if hse.response.status_code in [429, 500, 502, 503, 504]:
-                    logger.warning("%s Gemini API HTTP status error %d. Rotating key immediately.", key_label, hse.response.status_code)
-                    await self.key_manager.handle_429(key_label)
-                    continue
-                logger.error("HTTP status error during %s Gemini search: %s", key_label, hse)
-                break
-            except Exception as e:
-                logger.warning("Failed to fetch %s Gemini structured web claims: %s", key_label, e)
-                break
-        
+        def _run_search():
+            key = random.choice(available_keys)
+            client = genai.Client(api_key=key)
+            
+            search_config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                temperature=0.1,
+                max_output_tokens=1500,
+            )
+            
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=f"Search the web and extract atomic factual claims for: {query}",
+                config=search_config,
+            )
+            return response
+
+        try:
+            response = await asyncio.to_thread(_run_search)
+            if response and response.candidates:
+                candidate = response.candidates[0]
+                
+                # Extract grounding metadata URL
+                source_url = "https://www.iitmandi.ac.in"
+                grounding = candidate.grounding_metadata
+                if grounding and grounding.grounding_chunks:
+                    for chunk in grounding.grounding_chunks:
+                        if chunk.web and chunk.web.uri:
+                            source_url = chunk.web.uri
+                            break
+                
+                text = candidate.content.parts[0].text if candidate.content.parts else ""
+                if text:
+                    claims = parse_json_array(text)
+                    for idx, c in enumerate(claims):
+                        c["claim_id"] = f"claim_web_{idx}_{int(time.time())}"
+                        c["source_type"] = "Web Search"
+                        c["origin"] = "web"
+                        c["source_url"] = source_url
+                        if "source_name" not in c or not c["source_name"]:
+                            c["source_name"] = "Gemini Google Search"
+                    logger.info("Successfully extracted %d claims using new google-genai search.", len(claims))
+                    return claims
+        except Exception as e:
+            logger.warning("Failed to fetch google-genai structured web claims: %s", e)
+            
         return []
 
     async def extract_web_claims_for_entity(self, entity: str) -> List[Dict[str, Any]]:
