@@ -1024,6 +1024,8 @@ class RAGGenerator:
 Each claim must represent a single, atomic, verifiable metric or statement. Do not combine multiple facts into one sentence. 
 Do not hallucinate or add any info outside the provided documents.
 
+CRITICAL INSTRUCTION: If any document contains a list or table of academic branches/programs offered (such as lists of all 16 undergraduate branches), you MUST extract EACH offered branch/program as an individual atomic claim (e.g. "Chemical Engineering and Data Analytics B.Tech is offered at IIT Mandi"). Do not skip or omit any branches in a table or list.
+
 Return the findings STRICTLY as a raw JSON list of objects in the format below. Do not add markdown backticks or other text:
 [
   {{
