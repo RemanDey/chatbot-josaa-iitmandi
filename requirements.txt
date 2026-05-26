@@ -4,3 +4,6 @@ requests
 gunicorn
 twilio
 google-genai
+gevent
+cachetools
+Flask-Limiter
