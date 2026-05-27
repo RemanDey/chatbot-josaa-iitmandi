@@ -97,6 +97,7 @@ config = types.GenerateContentConfig(
     - Bold/Emphasis: <strong>text</strong> or <em>text</em>
     - Headings: DO NOT USE HEADING TAGS. Instead, use <strong> or <em> for emphasis and structure.
     - Lists: <ul>, <ol>, and <li> for bullet or numbered points
+    - Linebreaks
     - Separation: <hr /> for horizontal rules
     - Paragraphs: Wrap text block segments in <p>text</p> and use <br /> for single line breaks
     - Tables: Use <table>, <tr>, <th>, and <td> for structured grid data
