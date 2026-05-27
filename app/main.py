@@ -36,8 +36,7 @@ from app.retriever import retriever
 from app.reranker import reranker
 from app.confidence import confidence_scorer
 from app.generator import generate_answer, decompose_query, generator, classify_query_rich
-from app.web_cache import WebCache
-cache = WebCache()
+from app.cache import cache
 from app.observe import log_query_event, log_telemetry
 from app.config import settings
 
@@ -230,7 +229,8 @@ async def root() -> Dict[str, str]:
 @limiter.limit(settings.rate_limit_per_minute)
 async def chat(
     request: Request,
-    body: ChatRequest
+    body: ChatRequest,
+    _api_key: None = Depends(verify_api_key)
 ) -> Dict[str, Any]:
     """
     Process a user query through the full RAG pipeline:
@@ -259,8 +259,15 @@ async def chat(
     
     start_time = time.perf_counter()
 
-    # 1. Semantic Response Cache Check (Task 9) - BYPASSED (No cache for RAG as per instruction)
-    cached_res = None
+    # 1. Semantic Response Cache Check
+    cached_res = cache.get(query)
+    if cached_res:
+        logger.info("Cache HIT for query: '%s'", query[:60])
+        return {
+            "answer": cached_res["answer"],
+            "sources": cached_res.get("sources", []),
+            "cached": True
+        }
 
     # 2. Rich Intent Classification
     query_info = classify_query_rich(query)
@@ -335,8 +342,17 @@ async def chat(
         for s in res["sources"]
     ]
 
-    # 6. Response Cache Storage (Task 9) - BYPASSED (No cache for RAG as per instruction)
-    pass
+    # 6. Response Cache Storage
+    try:
+        cache.set(
+            query,
+            res["answer"],
+            clean_sources,
+            res.get("confidence", 0.0),
+            query_type=query_info.get("type", "general")
+        )
+    except Exception as e:
+        logger.error("Failed to store response in cache: %s", e)
 
     # 7. Telemetry & Observability logging (Task 10)
     try:

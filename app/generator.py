@@ -10,24 +10,7 @@ from typing import List, Dict, Any, Optional
 
 import httpx
 from app.config import settings
-from google import genai
-from google.genai import types
-
-grounding_tool = types.Tool(
-    google_search=types.GoogleSearch()
-)
-
-config = types.GenerateContentConfig(
-    tools=[grounding_tool],
-    system_instruction="""You are a helpful assistant for answering questions about IIT Mandi and JOSAA admissions.
-Visit IIT Mandi official Website and Use the Google Search tool to find up-to-date information when needed, and provide clear, concise answers to user queries.
-You must adhere to these strict formatting rules:
-- Never return a dense wall of text.
-- Use bold text (**key phrase**) at the start of lines to create visual anchors.
-- Use bullet points for features/lists, and numbered lists ONLY for sequential steps.
-- Keep responses informative and pointwise, even for complex queries. If the answer is not known, say "I don't know" instead of making up information.
-"""
-)
+from app.cache import cache
 
 logger = logging.getLogger("generator")
 
@@ -54,10 +37,6 @@ NORMALIZATION_MAP = {
 
 def normalize_entity_category(entity: str, category: str) -> tuple[str, str]:
     """
-    Normalizes the entity and category to resolve synonyms to the same cache namespace.
-    """
-    ent_lower = entity.lower().strip()
-    
     # Check normalization map and synonyms
     if any(x in ent_lower for x in ["electrical", "ee"]):
         entity_norm = "IIT Mandi EE"
@@ -122,34 +101,33 @@ def decompose_query(query: str) -> List[Dict[str, str]]:
         branches.append("EE")
     if re.search(r"\b(cse|computer science|computer)\b", query_lower):
         branches.append("CSE")
+        
+    # Match ME case-sensitively or using mech/mechanical (exclude lowercase 'me' word)
     if "mechanical" in query_lower or "mech" in query_lower or re.search(r"\bME\b", query):
         branches.append("ME")
+        
     if re.search(r"\bce\b|\bcivil\b", query_lower):
         branches.append("CE")
     if re.search(r"\bds\b|\bdata science\b", query_lower):
         branches.append("DS")
-    if re.search(r"\b(mnc|math|mathematics)\b", query_lower):
-        branches.append("MNC")
-    if re.search(r"\b(ep|physics|engineering physics)\b", query_lower):
-        branches.append("EP")
-    if re.search(r"\bvlsi\b", query_lower):
+    if re.search(r"\bvlsi\b|\bmicroelectronics\b", query_lower):
         branches.append("VLSI")
-    if re.search(r"\bge\b|\bgeneral engineering\b", query_lower):
+    if re.search(r"\bge\b|\bgeneral\b", query_lower):
         branches.append("GE")
-    if re.search(r"\b(bioe|bioengineering)\b", query_lower):
-        branches.append("BIOE")
-    if re.search(r"\b(bs chem|chemical sciences)\b", query_lower):
-        branches.append("BS_CHEM")
-    if re.search(r"\b(imba|integrated mba)\b", query_lower):
-        branches.append("IMBA")
-    if re.search(r"\b(agri|agricultural)\b", query_lower):
-        branches.append("AGRI")
-    if re.search(r"\b(chem_da|chemical engineering and data analytics)\b", query_lower):
-        branches.append("CHEM_DA")
-    if re.search(r"\b(quantum|qse)\b", query_lower):
-        branches.append("QUANTUM")
-    if re.search(r"\bmse\b|\bmaterials\b", query_lower):
+    if re.search(r"\bbioengineering\b|\bbioe\b", query_lower):
+        branches.append("BioE")
+    if re.search(r"\bchemical sciences\b|\bbs chem\b", query_lower):
+        branches.append("BS Chem")
+    if re.search(r"\bquantum\b", query_lower):
+        branches.append("Quantum")
+    if re.search(r"\bmaterials\b|\bmse\b", query_lower):
         branches.append("MSE")
+    if re.search(r"\bimba\b|\bintegrated mba\b", query_lower):
+        branches.append("IMBA")
+    if re.search(r"\bagricultural\b|\bagri\b", query_lower):
+        branches.append("Agri")
+    if re.search(r"\bchemical engineering\b|\bchem engg\b", query_lower):
+        branches.append("Chem")
         
     # Deduplicate branches
     branches = list(dict.fromkeys(branches))
@@ -265,7 +243,7 @@ def classify_query_rich(query: str) -> dict:
         "me": ["me", "mechanical", "mechanics"],
         "ce": ["ce", "civil"],
         "ep": ["ep", "physics", "engineering physics"],
-        "ds": ["dse", "data science"],
+        "dse": ["dse", "data science"],
         "mnc": ["mnc", "math", "mathematics"],
         "vlsi": ["vlsi", "microelectronics"],
         "ge": ["general engineering", "ge"],
@@ -466,7 +444,7 @@ def verify_claim(claim: dict, current_year: Optional[int] = None) -> dict:
             val_float = float(val)
             category = claim.get("category", "")
             # placement_rate > 100
-            if unit == "%" and val_float > 100.0:
+            if (unit == "%" or "placement" in category) and val_float > 100.0:
                 claim["rejected"] = True
                 logger.warning("Sanity Check: Rejected placement percentage %.2f (> 100%%)", val_float)
             # invalid negative metrics
@@ -654,107 +632,89 @@ SEMAPHORE = asyncio.Semaphore(5)
 
 class GeminiKeyManager:
     """
-    Manages active Gemini API keys with thread-safe threading.Lock,
-    instant key rotation on 429, and permanent disabling of leaked/blocked keys.
+    Manages active Gemini API keys with thread/async-safe asyncio.Lock,
+    instant key rotation on 429, and jittered cooldown intervals.
     """
-    def __init__(self):
-        import threading
-        import os
-        from app.config import settings
-        
+    def __init__(self, primary: str = "", secondary: str = "", third: str = ""):
         self.keys = []
+        self._current_idx = 0
+        self._lock = asyncio.Lock()
+        
         seen_keys = set()
         
-        env_vars = [
-            "GEMINI_API_KEY", "GEMINI_SECOND_API_KEY", "GEMINI_THIRD_API_KEY",
-            "GEMINI_FOURTH_API_KEY", "GEMINI_FIFTH_API_KEY",
-            "GEMINI_API_KEY_1", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "GEMINI_API_KEY_4",
-            "GOOGLE_API_KEY", "GOOGLE_API_KEY_1", "GOOGLE_API_KEY_2", "GOOGLE_API_KEY_3",
-            "GOOGLE_API_KEY_4", "GOOGLE_API_KEY_5", "GOOGLE_API_KEY_FALLBACK"
+        # 1. Add explicitly passed keys
+        for val, lbl in [(primary, "Primary"), (secondary, "Secondary"), (third, "Third")]:
+            if val and val.strip() and val not in ["your_gemini_api_key_here", "your_gemini_second_api_key_here", "your_gemini_third_api_key_here"]:
+                k = val.strip()
+                if k not in seen_keys:
+                    seen_keys.add(k)
+                    self.keys.append({"label": lbl, "key": k, "cooldown_until": 0.0})
+                    
+        # 2. Dynamically discover all other Gemini/Google keys in system environment
+        env_patterns = [
+            r"^GEMINI_API_KEY.*$",
+            r"^GEMINI_.*KEY.*$",
+            r"^GOOGLE_API_KEY.*$",
+            r"^GOOGLE_.*KEY.*$"
         ]
         
-        settings_keys = [
-            getattr(settings, "gemini_api_key", ""),
-            getattr(settings, "gemini_second_api_key", ""),
-            getattr(settings, "gemini_third_api_key", "")
-        ]
-        
-        def add_key(val, label):
-            if not val:
-                return
-            val = val.strip()
-            if any(p in val.lower() for p in ["your_gemini", "your_api", "placeholder", "leaked"]):
-                return
-            if val not in seen_keys:
-                seen_keys.add(val)
-                self.keys.append({
-                    "label": label,
-                    "key": val,
-                    "cooldown_until": 0.0,
-                    "is_leaked": False
-                })
-        
-        for var in env_vars:
-            add_key(os.getenv(var), var)
-            
-        for idx, key in enumerate(settings_keys, 1):
-            add_key(key, f"Settings_Key_{idx}")
-            
-        logger.info("GeminiKeyManager initialized with %d unique API keys.", len(self.keys))
-        self._current_idx = 0
-        self._lock = threading.Lock()
+        for env_name, env_val in os.environ.items():
+            env_val = env_val.strip()
+            if not env_val:
+                continue
+            if env_val.lower() in ["none", "null", "false", "placeholder", "your_gemini_api_key_here"]:
+                continue
+                
+            # Match patterns
+            is_match = False
+            for pat in env_patterns:
+                if re.match(pat, env_name, re.IGNORECASE):
+                    is_match = True
+                    break
+                    
+            if is_match and env_val not in seen_keys:
+                seen_keys.add(env_val)
+                label = f"Env_{env_name}"
+                self.keys.append({"label": label, "key": env_val, "cooldown_until": 0.0})
+                logger.info("Dynamically registered API key from environment: %s", env_name)
 
-    def get_available_key(self) -> Optional[dict]:
+    async def get_available_key(self) -> Optional[dict]:
         """
-        Returns the first key that is not leaked and not under active cooldown.
-        If all non-leaked keys are on cooldown, returns the key that will become available soonest.
+        Returns the first key that is not under active cooldown.
+        If all keys are on cooldown, returns the key that will become available soonest.
         """
-        with self._lock:
-            # Filter non-leaked keys
-            active_keys = [k for k in self.keys if not k.get("is_leaked", False)]
-            if not active_keys:
+        async with self._lock:
+            if not self.keys:
                 return None
-            
             now = time.time()
-            n_keys = len(active_keys)
+            n_keys = len(self.keys)
             
-            # 1. Try to find a non-leaked key that is not on cooldown
+            # 1. Try to find a key that is not on cooldown
             for i in range(n_keys):
                 idx = (self._current_idx + i) % n_keys
-                key_info = active_keys[idx]
+                key_info = self.keys[idx]
                 if key_info["cooldown_until"] < now:
-                    # Update next index for round-robin rotation
-                    self._current_idx = (self.keys.index(key_info) + 1) % len(self.keys)
+                    self._current_idx = idx
                     return key_info
             
             # 2. If all are on cooldown, select the one with the smallest cooldown_until
-            least_cooldown_key = min(active_keys, key=lambda k: k["cooldown_until"])
+            least_cooldown_key = min(self.keys, key=lambda k: k["cooldown_until"])
             logger.warning(
-                "All non-leaked Gemini API keys are currently on cooldown! Selecting: %s (remaining cooldown: %.1fs)", 
+                "All Gemini API keys are currently on cooldown! Selecting the least cooled down key: %s (remaining cooldown: %.1fs)", 
                 least_cooldown_key["label"], 
                 least_cooldown_key["cooldown_until"] - now
             )
             return least_cooldown_key
 
-    def handle_429(self, key_label: str):
+    async def handle_429(self, key_label: str):
         """Puts a key on jittered cooldown (120s + jitter) and rotates to the next index."""
-        with self._lock:
+        async with self._lock:
             now = time.time()
             cooldown_duration = 120.0 + random.randint(0, 30)
             for key_info in self.keys:
                 if key_info["label"] == key_label:
                     key_info["cooldown_until"] = now + cooldown_duration
                     logger.warning("Gemini Key %s put on jittered cooldown for %.1f seconds due to 429.", key_label, cooldown_duration)
-            if self.keys:
-                self._current_idx = (self._current_idx + 1) % len(self.keys)
-
-    def handle_403(self, key_label: str):
-        """Permanently marks a key as leaked/blocked so it is never used again."""
-        with self._lock:
-            for key_info in self.keys:
-                if key_info["label"] == key_label:
-                    key_info["is_leaked"] = True
-                    logger.critical("Gemini Key %s reported as LEAKED or BLOCKED (403). Permanently disabled.", key_label)
             if self.keys:
                 self._current_idx = (self._current_idx + 1) % len(self.keys)
 
@@ -783,39 +743,25 @@ def get_query_entities(query: str) -> List[str]:
     # DS
     if re.search(r"\bds\b|\bdata science\b", query_lower):
         branches.append("DS")
-    # MnC
-    if re.search(r"\b(mnc|math|mathematics)\b", query_lower):
-        branches.append("MNC")
-    # EP
-    if re.search(r"\b(ep|physics|engineering physics)\b", query_lower):
-        branches.append("EP")
-    # VLSI
-    if re.search(r"\bvlsi\b", query_lower):
+    # New branches
+    if re.search(r"\bvlsi\b|\bmicroelectronics\b", query_lower):
         branches.append("VLSI")
-    # GE
-    if re.search(r"\bge\b|\bgeneral engineering\b", query_lower):
+    if re.search(r"\bge\b|\bgeneral\b", query_lower):
         branches.append("GE")
-    # BioE
-    if re.search(r"\b(bioe|bioengineering)\b", query_lower):
-        branches.append("BIOE")
-    # BS Chem
-    if re.search(r"\b(bs chem|chemical sciences)\b", query_lower):
-        branches.append("BS_CHEM")
-    # IMBA
-    if re.search(r"\b(imba|integrated mba)\b", query_lower):
-        branches.append("IMBA")
-    # Agri
-    if re.search(r"\b(agri|agricultural)\b", query_lower):
-        branches.append("AGRI")
-    # Chem DA
-    if re.search(r"\b(chem_da|chemical engineering and data analytics)\b", query_lower):
-        branches.append("CHEM_DA")
-    # Quantum
-    if re.search(r"\b(quantum|qse)\b", query_lower):
-        branches.append("QUANTUM")
-    # MSE
-    if re.search(r"\bmse\b|\bmaterials\b", query_lower):
+    if re.search(r"\bbioengineering\b|\bbioe\b", query_lower):
+        branches.append("BioE")
+    if re.search(r"\bchemical sciences\b|\bbs chem\b", query_lower):
+        branches.append("BS Chem")
+    if re.search(r"\bquantum\b", query_lower):
+        branches.append("Quantum")
+    if re.search(r"\bmaterials\b|\bmse\b", query_lower):
         branches.append("MSE")
+    if re.search(r"\bimba\b|\bintegrated mba\b", query_lower):
+        branches.append("IMBA")
+    if re.search(r"\bagricultural\b|\bagri\b", query_lower):
+        branches.append("Agri")
+    if re.search(r"\bchemical engineering\b|\bchem engg\b", query_lower):
+        branches.append("Chem")
         
     # Deduplicate branches preserving order
     branches = list(dict.fromkeys(branches))
@@ -960,62 +906,14 @@ class RAGGenerator:
         self.hf_model = getattr(settings, "hf_model", "meta-llama/Llama-3.3-70B-Instruct")
         self.hf_api_url = getattr(settings, "hf_api_url", "https://router.huggingface.co/v1/chat/completions")
 
-        self.key_manager = GeminiKeyManager()
+        self.key_manager = GeminiKeyManager(
+            self.gemini_api_key,
+            self.gemini_second_api_key,
+            self.gemini_third_api_key
+        )
         self._cache_lock = asyncio.Lock()
         self._groq_fail_count = 0
         self._groq_bypass_until = 0.0
-
-    def _call_google_genai(self, contents: str, system_instruction: Optional[str] = None) -> str:
-        """Call Gemini model using Google GenAI SDK, with optional system instruction, and auto-retry on 429/403."""
-        GOOGLE_MODEL = "gemini-2.5-flash"
-        
-        # Retry up to the number of available keys
-        max_retries = len(self.key_manager.keys)
-        for attempt in range(max_retries):
-            key_info = self.key_manager.get_available_key()
-            if not key_info:
-                logger.error("No working Gemini keys available!")
-                break
-                
-            key = key_info["key"]
-            label = key_info["label"]
-            
-            try:
-                client = genai.Client(api_key=key)
-                
-                # If system_instruction is provided, use it (no web search grounding for synthesis)
-                if system_instruction:
-                    call_config = types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=0.1,
-                        max_output_tokens=2000,
-                    )
-                else:
-                    call_config = types.GenerateContentConfig(
-                        temperature=0.1,
-                        max_output_tokens=2000,
-                    )
-                
-                response = client.models.generate_content(
-                    model=GOOGLE_MODEL,
-                    contents=contents,
-                    config=call_config,
-                )
-                return response.text or ""
-            except Exception as e:
-                err_msg = str(e).lower()
-                if "429" in err_msg or "quota" in err_msg or "rate limit" in err_msg:
-                    logger.warning("Gemini API call returned 429 for key %s. Rotating...", label)
-                    self.key_manager.handle_429(label)
-                elif "403" in err_msg or "leaked" in err_msg or "permission" in err_msg:
-                    logger.critical("Gemini API key %s reported as leaked or blocked (403). Rotating...", label)
-                    self.key_manager.handle_403(label)
-                else:
-                    logger.warning("Gemini API call failed with key %s: %s", label, e)
-                    # Put it on a brief cooldown to avoid immediate reuse
-                    self.key_manager.handle_429(label)
-                    
-        raise RuntimeError("All configured Gemini API keys failed during generation.")
 
     def _call_llm(self, messages: list) -> Optional[str]:
         """Core LLM call handler with Groq primary and multiple fallbacks (Gemini, OpenRouter, DeepSeek, Nvidia, Hugging Face)."""
@@ -1051,24 +949,56 @@ class RAGGenerator:
                     logger.warning("Groq call failed in generator: %s. Trying fallbacks...", e)
 
         # 2. Gemini 2.5 Flash (Fallback 1 - High reliability & rate limit)
-        try:
-            system_instruction = None
-            user_content = ""
-            for msg in messages:
-                if msg["role"] == "system":
-                    system_instruction = msg["content"]
-                elif msg["role"] == "user":
-                    user_content = msg["content"]
-            
-            if not user_content:
-                user_content = "\n\n".join(msg["content"] for msg in messages if msg["role"] in ["system", "user"])
-                system_instruction = None
+        # 2. Gemini 2.5 Flash (Fallback 1)
+        # Skip entirely if all keys are on cooldown — retrying just burns rate limit and refreshes cooldowns
+        available_gemini_key = None
+        for k in self.key_manager.keys:
+            if k["cooldown_until"] < now:
+                available_gemini_key = k
+                break
+
+        if available_gemini_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={available_gemini_key['key']}"
+                prompt_parts = []
+                for msg in messages:
+                    if msg["role"] in ["system", "user"]:
+                        prompt_parts.append(msg["content"])
+                combined_prompt = "\n\n".join(prompt_parts)
                 
-            res_text = self._call_google_genai(user_content, system_instruction)
-            if res_text:
-                return res_text.strip()
-        except Exception as e:
-            logger.warning("Gemini synthesis fallback failed: %s. Trying OpenRouter fallback...", e)
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": combined_prompt}]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.1,
+                        "maxOutputTokens": 1500,
+                        "thinkingConfig": {
+                            "thinkingBudget": 0
+                        }
+                    }
+                }
+                with httpx.Client(timeout=15.0) as client:
+                    response = client.post(url, json=payload)
+                    if response.status_code == 429:
+                        available_gemini_key["cooldown_until"] = now + 120.0
+                        logger.warning("Gemini Key %s rate limited (429 status). Putting on cooldown for 120s.", available_gemini_key["label"])
+                        response.raise_for_status()
+                    response.raise_for_status()
+                    res_data = response.json()
+                    candidates = res_data.get("candidates", [])
+                    if candidates:
+                        content = candidates[0].get("content", {})
+                        parts = content.get("parts", [])
+                        if parts:
+                            return parts[0].get("text", "").strip()
+            except Exception as e:
+                if hasattr(e, "response") and e.response is not None and e.response.status_code == 429:
+                    available_gemini_key["cooldown_until"] = now + 120.0
+                    logger.warning("Gemini Key %s rate limited (HTTPStatusError 429). Putting on cooldown for 120s.", available_gemini_key["label"])
+                logger.warning("Gemini synthesis fallback failed: %s. Trying OpenRouter fallback...", e)
+        else:
+            logger.warning("All Gemini keys on cooldown. Skipping to OpenRouter fallback.")
 
         # 2. OpenRouter (Fallback 1)
         if self.openrouter_api_key and self.openrouter_api_key != "your_openrouter_api_key_here":
@@ -1173,7 +1103,7 @@ class RAGGenerator:
         # Ensure chunks are sorted by confidence and limit to top 10 to avoid Groq 413 payload limits
         sorted_chunks = sorted(confident_chunks, key=lambda x: x.get("confidence_score", 0.0), reverse=True)
         confident_chunks_limited = sorted_chunks[:10]
- 
+
         context_parts = []
         for i, chunk in enumerate(confident_chunks_limited, 1):
             source = chunk.get("metadata", {}).get("source", "unknown")
@@ -1184,8 +1114,6 @@ class RAGGenerator:
         prompt = f"""You are a precise data extractor. Extract atomic factual claims from the following official local documents.
 Each claim must represent a single, atomic, verifiable metric or statement. Do not combine multiple facts into one sentence. 
 Do not hallucinate or add any info outside the provided documents.
-
-CRITICAL INSTRUCTION: If any document contains a list or table of academic branches/programs offered (such as lists of all 16 undergraduate branches), you MUST extract EACH offered branch/program as an individual atomic claim (e.g. "Chemical Engineering and Data Analytics B.Tech is offered at IIT Mandi"). Do not skip or omit any branches in a table or list.
 
 Return the findings STRICTLY as a raw JSON list of objects in the format below. Do not add markdown backticks or other text:
 [
@@ -1218,8 +1146,9 @@ Documents:
             c["origin"] = "rag"
         return claims
 
+
     async def extract_web_claims(self, query: str) -> List[Dict[str, Any]]:
-        """Web Claims Extractor: Uses Google GenAI SDK with Search Grounding to fetch and extract web claims."""
+        """Web Claims Extractor: Uses Gemini 2.5 Flash with search grounding to fetch and extract web claims."""
         system_instruction = (
             "You are a JOSAA counseling intelligence agent. Actively use Google Search to retrieve "
             "the latest, fresh facts and statistics about branches and programs at IIT Mandi from the web. "
@@ -1236,75 +1165,89 @@ Documents:
             "  }\n"
             "]"
         )
-
-        def _run_search():
-            max_retries = len(self.key_manager.keys)
-            for attempt in range(max_retries):
-                key_info = self.key_manager.get_available_key()
-                if not key_info:
-                    logger.error("No working Gemini keys available for web search!")
-                    break
-                    
-                key = key_info["key"]
-                label = key_info["label"]
-                
-                try:
-                    client = genai.Client(api_key=key)
-                    search_config = types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        tools=[types.Tool(google_search=types.GoogleSearch())],
-                        temperature=0.1,
-                        max_output_tokens=1500,
-                    )
-                    
-                    response = client.models.generate_content(
-                        model="gemini-2.5-flash",
-                        contents=f"Search the web and extract atomic factual claims for: {query}",
-                        config=search_config,
-                    )
-                    return response
-                except Exception as e:
-                    err_msg = str(e).lower()
-                    if "429" in err_msg or "quota" in err_msg or "rate limit" in err_msg:
-                        logger.warning("Gemini API call returned 429 for key %s. Rotating...", label)
-                        self.key_manager.handle_429(label)
-                    elif "403" in err_msg or "leaked" in err_msg or "permission" in err_msg:
-                        logger.critical("Gemini API key %s reported as leaked or blocked (403). Rotating...", label)
-                        self.key_manager.handle_403(label)
-                    else:
-                        logger.warning("Gemini API call failed with key %s: %s", label, e)
-                        self.key_manager.handle_429(label)
-            raise RuntimeError("All configured Gemini API keys failed during web search.")
-
-        try:
-            response = await asyncio.to_thread(_run_search)
-            if response and response.candidates:
-                candidate = response.candidates[0]
-                
-                # Extract grounding metadata URL
-                source_url = "https://www.iitmandi.ac.in"
-                grounding = candidate.grounding_metadata
-                if grounding and grounding.grounding_chunks:
-                    for chunk in grounding.grounding_chunks:
-                        if chunk.web and chunk.web.uri:
-                            source_url = chunk.web.uri
-                            break
-                
-                text = candidate.content.parts[0].text if candidate.content.parts else ""
-                if text:
-                    claims = parse_json_array(text)
-                    for idx, c in enumerate(claims):
-                        c["claim_id"] = f"claim_web_{idx}_{int(time.time())}"
-                        c["source_type"] = "Web Search"
-                        c["origin"] = "web"
-                        c["source_url"] = source_url
-                        if "source_name" not in c or not c["source_name"]:
-                            c["source_name"] = "Gemini Google Search"
-                    logger.info("Successfully extracted %d claims using new google-genai search.", len(claims))
-                    return claims
-        except Exception as e:
-            logger.warning("Failed to fetch google-genai structured web claims: %s", e)
+        
+        payload = {
+            "systemInstruction": {
+                "parts": [{"text": system_instruction}]
+            },
+            "contents": [{
+                "parts": [{"text": f"Search the web and extract atomic factual claims for: {query}"}]
+            }],
+            "tools": [{"google_search": {}}],
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": 1500,
+                "thinkingConfig": {
+                    "thinkingBudget": 0
+                }
+            }
+        }
+        
+        # Get maximum attempts matching configured keys
+        max_attempts = len(self.key_manager.keys)
+        if max_attempts == 0:
+            logger.info("No Gemini API keys configured. Skipping Gemini web search.")
+            return []
             
+        for attempt in range(max_attempts):
+            key_info = await self.key_manager.get_available_key()
+            if not key_info:
+                logger.warning("No Gemini API keys available.")
+                break
+                
+            key_label = key_info["label"]
+            api_key = key_info["key"]
+            url = f"{self.gemini_api_url}?key={api_key}"
+            
+            logger.info("Attempting Gemini web search using %s API key...", key_label)
+            
+            try:
+                async with httpx.AsyncClient(timeout=25.0) as client:
+                    async with SEMAPHORE:
+                        response = await client.post(url, json=payload)
+                        
+                    if response.status_code in [429, 500, 502, 503, 504]:
+                        logger.warning("%s Gemini API returned %d. Rotating key immediately.", key_label, response.status_code)
+                        await self.key_manager.handle_429(key_label)
+                        continue  # Rotate immediately next loop iteration
+                        
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        # Extract search grounding metadata URLs
+                        grounding = candidates[0].get("groundingMetadata", {})
+                        chunks = grounding.get("groundingChunks", [])
+                        urls = [ch.get("web", {}).get("uri") for ch in chunks if ch.get("web", {}).get("uri")]
+                        source_url = urls[0] if urls else "https://www.iitmandi.ac.in"
+
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            text = parts[0].get("text", "").strip()
+                            claims = parse_json_array(text)
+                            
+                            for idx, c in enumerate(claims):
+                                c["claim_id"] = f"claim_web_{idx}_{int(time.time())}"
+                                c["source_type"] = "Web Search"
+                                c["origin"] = "web"
+                                c["source_url"] = source_url
+                                if "source_name" not in c or not c["source_name"]:
+                                    c["source_name"] = "Gemini Google Search"
+                            logger.info("Successfully extracted %d claims from %s Gemini Web Search with source URL: %s", len(claims), key_label, source_url)
+                            return claims
+                    break  # Exit on success or no candidates
+            except httpx.HTTPStatusError as hse:
+                if hse.response.status_code in [429, 500, 502, 503, 504]:
+                    logger.warning("%s Gemini API HTTP status error %d. Rotating key immediately.", key_label, hse.response.status_code)
+                    await self.key_manager.handle_429(key_label)
+                    continue
+                logger.error("HTTP status error during %s Gemini search: %s", key_label, hse)
+                break
+            except Exception as e:
+                logger.warning("Failed to fetch %s Gemini structured web claims: %s", key_label, e)
+                break
+        
         return []
 
     async def extract_web_claims_for_entity(self, entity: str) -> List[Dict[str, Any]]:
@@ -1507,7 +1450,7 @@ Documents:
             any(w in query_stripped.lower() for w in ["branch", "program", "course", "department", "offer"])
         )
         if skip_rag_llm:
-            logger.info("Strong-match branch/program query detected. Bypassing RAG dynamic LLM claim extraction to preserve all raw document details.")
+            logger.info("Strong-match query type '%s' detected. Bypassing RAG dynamic LLM claim extraction.", query_class)
             # Ensure chunks are sorted and limit to top 12 chunks to avoid token blowup
             sorted_chunks = sorted(confident_chunks, key=lambda x: x.get("confidence_score", 0.0), reverse=True)
             rag_claims = self._chunks_to_claims(sorted_chunks[:12])
@@ -1532,8 +1475,7 @@ Documents:
             web_cache = WebCache()
             
             for ent in entities:
-                norm_ent, _ = normalize_entity_category(ent, "general")
-                cached_res = web_cache.get(norm_ent)
+                cached_res = web_cache.get(ent)
                 if cached_res is not None:
                     cache_hits += 1
                     claims = cached_res.get("extracted_claims", [])
@@ -1542,18 +1484,14 @@ Documents:
                             c["origin"] = "web"
                             verify_claim(c)
                             web_claims.append(c)
-                    logger.info("Web cache HIT for entity: '%s' (%d claims)", norm_ent, len(claims))
+                    logger.info("Web cache HIT for entity: '%s' (%d claims)", ent, len(claims))
                 else:
                     entities_to_fetch.append(ent)
                     
             if entities_to_fetch:
                 now = time.time()
-                active_keys = [
-                    k for k in self.key_manager.keys 
-                    if k["cooldown_until"] < now and not k.get("is_leaked", False)
-                ]
-                non_leaked_keys = [k for k in self.key_manager.keys if not k.get("is_leaked", False)]
-                if not active_keys and non_leaked_keys:
+                active_keys = [k for k in self.key_manager.keys if k["cooldown_until"] < now]
+                if not active_keys and self.key_manager.keys:
                     logger.warning("Degraded Mode Triggered: All Gemini keys are currently cooling down!")
                     degraded_mode = True
                 else:
@@ -1587,14 +1525,12 @@ Documents:
                                             "confidence": float(c.get("confidence", 0.5)),
                                             "origin": "web"
                                         })
-                                norm_ent, _ = normalize_entity_category(ent, "general")
-                                web_cache.set(norm_ent, "", extracted_claims=verified_fresh, entity=norm_ent, query_type=query_info["type"])
+                                web_cache.set(ent, "", extracted_claims=verified_fresh, entity=ent, query_type=query_info["type"])
                                 for c in verified_fresh:
                                     verify_claim(c)
                                     web_claims.append(c)
                             else:
-                                norm_ent, _ = normalize_entity_category(ent, "general")
-                                web_cache.set(norm_ent, "", extracted_claims=[], entity=norm_ent, query_type=query_info["type"])
+                                web_cache.set(ent, "", extracted_claims=[], entity=ent, query_type=query_info["type"])
                     except asyncio.TimeoutError:
                         logger.error("Gemini web search timed out. Falling back to Degraded Mode.")
                         degraded_mode = True
