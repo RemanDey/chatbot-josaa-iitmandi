@@ -29,6 +29,11 @@
       "id": "academic_calendar_duration",
       "keywords": ["semester system", "when do classes start", "academic year timeline"],
       "response": "IIT Mandi follows a strict semester system. The academic year is divided into two terms: the Odd Semester (running from early August through late November/early December) and the Even Semester (running from February through June). Each semester runs roughly 18 weeks, which includes instructional days, mid-semester checks, and end-semester evaluations."
-    }
+    },
+    {
+  "id": "village_square_info",
+  "keywords": ["village square", "vsq", "vs", "hangout spots"],
+  "response": "<strong>The Village Square</strong> (commonly known as <strong>VS</strong>) is the primary commercial and social hub of IIT Mandi's North Campus (Kamand).<br /><br />It houses key student amenities including a well-stocked grocery store, a stationery and printing shop, a pharmacy, and a canteen Bake O Mocha serving meals and snacks.<br/><br/>It serves as a central meeting point for students, faculty, and visitors alike.<br /><br /><img src='https://infra.iitmandi.ac.in/img/guesthouse.jpg' alt='IIT Mandi Village Square Guest House Complex' style='max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px;'/>"
+  }
   ]
 }
