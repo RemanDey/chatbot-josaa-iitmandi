@@ -7,3 +7,4 @@ google-genai
 gevent
 cachetools
 Flask-Limiter
+sentence-transformers

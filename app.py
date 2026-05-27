@@ -341,7 +341,7 @@ def generate_ai_response(prompt):
     if cached_reply is not None:
         return cached_reply
     #generating hardcodede responses
-    hardcoded_router = hardcoded_responses.hardcoded_responses("triggers.json")
+    hardcoded_router = hardcoded_responses.SemanticRouter("triggers.json",0.50)
     hardcoded_reply, bypassed = hardcoded_router.process_prompt(prompt)
     if bypassed:
         return format_api_response(hardcoded_reply)
@@ -350,7 +350,7 @@ def generate_ai_response(prompt):
 
     # response = requests.post(AI_BACKEND_URL, json=payload)
     # processessed_reply = format_ai_response(response)
-    raw_reply ="abb dukaan band hain...baad main baat krte hain<br><img src='https://i.pinimg.com/736x/1c/e5/f4/1ce5f4bb215625e1d07c0c2f10083097.jpg' style='max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px;'/>" #generate_api_response(prompt)
+    raw_reply =generate_api_response(prompt)
     processessed_reply = format_api_response(raw_reply)
     # Avoid caching transient upstream failures, otherwise a single timeout could
     # serve the same apology for a common question for the full one-hour TTL.

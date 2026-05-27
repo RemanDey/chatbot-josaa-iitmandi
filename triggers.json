@@ -1,39 +1,95 @@
 {
   "hardcoded_triggers": [
     {
-      "id": "total_btech_courses",
-      "keywords": ["how many courses", "list of branches", "available branches", "btech programs", "what courses are offered"],
-      "response": "IIT Mandi offers 11 distinct B.Tech disciplines and 1 Bachelor of Science (BS) program, under JoSAA: \n\n1. Computer Science & Engineering (CSE), \n2. Data Science & Artificial Intelligence (DS-AI), \n3. Mathematics & Computing (MnC), \n4. Electrical Engineering (EE), \n5. Microelectronics & VLSI, \n6. Mechanical Engineering (ME), \n7. Civil Engineering (CE), \n8. Engineering Physics (EP), \n9. Bio-Engineering, \n10. Materials Science & Engineering, \n11. General Engineering"
-    },
-    {
       "id": "seat_matrix_capacity",
-      "keywords": ["total seats", "seat matrix", "intake capacity", "how many seats"],
-      "response": "<strong>IIT Mandi Undergraduate Seat Matrix Overview</strong><p>IIT Mandi offers an approximate total pool of <strong>630 seats</strong> across its standard 4-year undergraduate tracks (B.Tech and BS programs) through JoSAA counseling.</p><p><em>Note on Seat Pools:</em> The total intake includes both the Gender-Neutral pool and the Female Supernumerary pool (which adds extra seats to achieve the required 20% female enrollment mandated by the ministry).</p><hr /><p><strong>Branch-Wise Seat Distribution</strong></p><p>The seats are split across distinct undergraduate specializations. The baseline sanctioned seat capacities per branch typically follow this breakdown:</p><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><tr><th align='left'>Academic Program (4-Year Track)</th><th align='center'>Standard Core Intake</th><th align='center'>Total Alloted Base (Incl. Female Pool)</th></tr><tr><td>Computer Science and Engineering (CSE)</td><td align='center'>72</td><td align='center'>~90</td></tr><tr><td>Electrical Engineering (EE)</td><td align='center'>56</td><td align='center'>~70</td></tr><tr><td>Mechanical Engineering (ME)</td><td align='center'>48</td><td align='center'>~60</td></tr><tr><td>Civil Engineering (CE)</td><td align='center'>40</td><td align='center'>~50</td></tr><tr><td>Microelectronics and VLSI (MEVLSI)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Data Science and Artificial Intelligence (DSAI)</td><td align='center'>48</td><td align='center'>~60</td></tr><tr><td>Materials Science and Engineering</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Mathematics and Computing (MNC)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>General Engineering (GE)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Engineering Physics (EP)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Quantum Science and Engineering</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Chemical Engineering and Data Analytics</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Agriculture Engineering with Data Analytics</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Bio-Engineering (Bio)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>BS in Chemical Sciences (BSCS)</td><td align='center'>24</td><td align='center'>~30</td></tr></table><hr /><p><strong>Category-Wise Seat Allocation Quota</strong></p><ul><li><strong>Open Category (General):</strong> ~40.5%</li><li><strong>OBC-NCL:</strong> 27%</li><li><strong>Scheduled Caste (SC):</strong> 15%</li><li><strong>General-EWS:</strong> 10%</li><li><strong>Scheduled Tribe (ST):</strong> 7.5%</li></ul><hr /><p><strong>Additional Management Admissions</strong></p><p>Alongside the technical courses, the School of Management intakes <strong>80 candidates</strong> for its <strong>IMBA</strong> programs. Please note that admissions for this track are managed independently by the institute and are <strong>not processed through JoSAA counseling</strong>.</p>"
+      "keywords": [
+        "total seats",
+        "seat matrix",
+        "intake capacity",
+        "how many seats",
+        "how many courses",
+        "list of branches",
+        "available branches",
+        "btech programs",
+        "what courses are offered",
+        "btech disciplines"
+      ],
+      "response": "<strong>IIT Mandi Undergraduate Seat Matrix Overview</strong><p>IIT Mandi offers an approximate total pool of <strong>630 seats</strong> across its standard 4-year undergraduate tracks (B.Tech and BS programs) through <a href='https://josaa.admissions.nic.in/applicant/seatmatrix/seatmatrixinfo.aspx'>JoSAA counseling</a>.</p><p><em>Note on Seat Pools:</em> The total intake includes both the Gender-Neutral pool and the Female Supernumerary pool (which adds extra seats to achieve the required 20% female enrollment mandated by the ministry).</p><hr /><p><strong>Branch-Wise Seat Distribution</strong></p><p>The seats are split across distinct undergraduate specializations. The baseline sanctioned seat capacities per branch typically follow this breakdown:</p><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><tr><th align='left'>Academic Program (4-Year Track)</th><th align='center'>Standard Core Intake</th><th align='center'>Total Alloted Base (Incl. Female Pool)</th></tr><tr><td>Computer Science and Engineering (CSE)</td><td align='center'>72</td><td align='center'>~90</td></tr><tr><td>Electrical Engineering (EE)</td><td align='center'>56</td><td align='center'>~70</td></tr><tr><td>Mechanical Engineering (ME)</td><td align='center'>48</td><td align='center'>~60</td></tr><tr><td>Civil Engineering (CE)</td><td align='center'>40</td><td align='center'>~50</td></tr><tr><td>Microelectronics and VLSI (MEVLSI)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Data Science and Artificial Intelligence (DSAI)</td><td align='center'>48</td><td align='center'>~60</td></tr><tr><td>Materials Science and Engineering</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Mathematics and Computing (MNC)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>General Engineering (GE)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Engineering Physics (EP)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Quantum Science and Engineering</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Chemical Engineering and Data Analytics</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Agriculture Engineering with Data Analytics</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>Bio-Engineering (Bio)</td><td align='center'>24</td><td align='center'>~30</td></tr><tr><td>BS in Chemical Sciences (BSCS)</td><td align='center'>24</td><td align='center'>~30</td></tr></table><hr /><p><strong>Category-Wise Seat Allocation Quota</strong></p><ul><li><strong>Open Category (General):</strong> ~40.5%</li><li><strong>OBC-NCL:</strong> 27%</li><li><strong>Scheduled Caste (SC):</strong> 15%</li><li><strong>General-EWS:</strong> 10%</li><li><strong>Scheduled Tribe (ST):</strong> 7.5%</li></ul><hr /><p><strong>Additional Management Admissions</strong></p><p>Alongside the technical courses, the School of Management intakes <strong>80 candidates</strong> for its <strong>IMBA</strong> programs. Please note that admissions for this track are managed independently by the institute and are <strong>not processed through JoSAA counseling</strong>.</p>"
     },
     {
       "id": "double_major_policy",
-      "keywords": ["double major", "second major", "can i change branch to cse", "minor degree"],
+      "keywords": [
+        "double major",
+        "second major",
+        "can i change branch to cse",
+        "minor degree"
+      ],
       "response": "IIT Mandi features a highly flexible 'Double Major' system introduced from 2021. This allows a student in any core branch (like Civil or Mechanical) to earn a second major degree in another field (including Computer Science & Engineering) by completing approximately 12 additional specialized courses across an extra 1 to 2 semesters. Minor specializations (3 to 4 extra courses) are also available in areas like Management, Intelligent Systems, and German language."
     },
     {
       "id": "dual_degree_integrated",
-      "keywords": ["dual degree", "mtech integrated", "btech mtech combined", "5 year integrated program", "can i do btech and mtech together"],
-      "response": "**Dual Degree Programs at IIT Mandi: An Overview**\n\nIIT Mandi offers highly specialized 5-year Integrated Dual Degree programs. However, a critical distinction must be made regarding how students can opt into them:\n\n> **Important Note:** There are absolutely **no dual degree options listed under IIT Mandi in JoSAA counseling.** All choices available during JoSAA seat allocation are strictly standard 4-year B.Tech or BS programs.\n\n---\n\n **Available Dual Degree Programs**\nCurrently, the institute provides dual degree pathways primarily in emerging, interdisciplinary domains:\n\n*   **B.Tech + M.Tech in Bio-Engineering:** A 5-year flagship integrated program that blends core engineering principles with biological sciences. Students can specialize in areas like Biomedical Engineering, Agro-Technology, or Computational Bioengineering.\n*   **B.Tech in General Engineering (with MBA Option):** A flexible, multi-disciplinary program where students have the option to combine their technical engineering undergraduate curriculum with a Master of Business Administration (MBA) track.\n\n---\n\n **Admission & Enrollment Process**\nBecause these programs cannot be chosen directly during JEE Advanced / JoSAA counseling, students must follow the internal institute route:\n\n1.  **Initial Admission:** Students must first qualify for JEE Advanced and secure a seat in a standard 4-year B.Tech program at IIT Mandi through JoSAA.\n2.  **Internal Opt-In / Conversion:** During the course of their undergraduate studies (typically around the end of the 2nd or 3rd year), eligible students can formally apply to convert their degree or opt into the integrated 5-year master's track.\n3.  **Eligibility Criteria:** Internal upgrades are highly competitive and depend strictly on the student's **Cumulative Grade Point Average (CGPA)**, academic performance, and seat availability within the respective departments.\n\n Additionally, the School of Management offers a 5-year Integrated Master of Business Administration (IMBA) program directly open to students after their Class 12 board qualifications through JEE Advanced allocations."
+      "keywords": [
+        "dual degree",
+        "mtech integrated",
+        "btech mtech combined",
+        "5 year integrated program",
+        "can i do btech and mtech together"
+      ],
+      "response": "**Dual Degree Programs at IIT Mandi: An Overview**\n\nIIT Mandi offers highly specialized 5-year Integrated Dual Degree programs. However, a critical distinction must be made regarding how students can opt into them:\n\n> **Important Note:** There are absolutely **no dual degree options listed under IIT Mandi in JoSAA counseling.** All choices available during JoSAA seat allocation are strictly standard 4-year B.Tech or BS programs.\n\n---\n\n **Available Dual Degree Programs**\nCurrently, the institute provides dual degree pathways primarily in emerging, interdisciplinary domains:\n\n* **B.Tech + M.Tech in Bio-Engineering:** A 5-year flagship integrated program that blends core engineering principles with biological sciences. Students can specialize in areas like Biomedical Engineering, Agro-Technology, or Computational Bioengineering.\n* **B.Tech in General Engineering (with MBA Option):** A flexible, multi-disciplinary program where students have the option to combine their technical engineering undergraduate curriculum with a Master of Business Administration (MBA) track.\n\n---\n\n **Admission & Enrollment Process**\nBecause these programs cannot be chosen directly during JEE Advanced / JoSAA counseling, students must follow the internal institute route:\n\n1.  **Initial Admission:** Students must first qualify for JEE Advanced and secure a seat in a standard 4-year B.Tech program at IIT Mandi through JoSAA.\n2.  **Internal Opt-In / Conversion:** During the course of their undergraduate studies (typically around the end of the 2nd or 3rd year), eligible students can formally apply to convert their degree or opt into the integrated 5-year master's track.\n3.  **Eligibility Criteria:** Internal upgrades are highly competitive and depend strictly on the student's **Cumulative Grade Point Average (CGPA)**, academic performance, and seat availability within the respective departments.\n\n Additionally, the School of Management offers a 5-year Integrated Master of Business Administration (IMBA) program directly open to students after their Class 12 board qualifications through JEE Advanced allocations."
     },
     {
       "id": "tuition_fees_structure",
-      "keywords": ["btech fees", "hostel fees", "semester fee", "how much is the fee"],
+      "keywords": [
+        "btech fees",
+        "hostel fees",
+        "semester fee",
+        "how much is the fee"
+      ],
       "response": "The tuition fee for the 4-year B.Tech/BS program at IIT Mandi is approximately ₹1,00,000 per semester for General, EWS, and OBC candidates (total academic expenses hover around ₹8.25 Lakhs across 4 years). Candidates should note that 100% tuition fee waivers are applicable for SC, ST, and PwD candidates, and partial-to-full waivers exist for economically weaker sections based on verified family income declarations."
     },
     {
       "id": "academic_calendar_duration",
-      "keywords": ["semester system", "when do classes start", "academic year timeline"],
+      "keywords": [
+        "semester system",
+        "when do classes start",
+        "academic year timeline"
+      ],
       "response": "IIT Mandi follows a strict semester system. The academic year is divided into two terms: the Odd Semester (running from early August through late November/early December) and the Even Semester (running from February through June). Each semester runs roughly 18 weeks, which includes instructional days, mid-semester checks, and end-semester evaluations."
     },
     {
-  "id": "village_square_info",
-  "keywords": ["village square", "vsq", "vs", "hangout spots"],
-  "response": "<strong>The Village Square</strong> (commonly known as <strong>VS</strong>) is the primary commercial and social hub of IIT Mandi's North Campus (Kamand).<br /><br />It houses key student amenities including a well-stocked grocery store, a stationery and printing shop, a pharmacy, and a canteen Bake O Mocha serving meals and snacks.<br/><br/>It serves as a central meeting point for students, faculty, and visitors alike.<br /><br /><img src='https://infra.iitmandi.ac.in/img/guesthouse.jpg' alt='IIT Mandi Village Square Guest House Complex' style='max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px;'/>"
-  }
+      "id": "how_to_reach_iit_mandi",
+      "keywords": [
+        "how to reach",
+        "nearest railway station",
+        "reach iit",
+        "nearest airport",
+        "how to get to campus",
+        "travel to kamand",
+        "directions to iit mandi",
+        "kiratpur sahib"
+      ],
+      "response": "<p>IIT Mandi is located in the Kamand Valley, about 14 km from Mandi town. You can reach the campus using the following transport options:</p><ul><li><strong>By Air:</strong> <strong>Chandigarh International Airport (IXC) is highly recommended as the best and most reliable option</strong> due to its widespread commercial flight connectivity across India. From Chandigarh, you can easily take a bus or hire a taxi to Mandi (approx. 200 km). While <em>Bhuntar Airport (Kullu)</em> is physically closer (60 km), flights there are limited and highly weather-dependent.</li><li><strong>By Train:</strong> <strong>Kiratpur Sahib Railway Station</strong> is the closest broad-gauge option. If you take a train there (like the Jan Shatabdi or Himachal Express), the road distance to Mandi drops to just around 125 km (about a 3.5 to 4-hour drive via the new highway system). Alternatively, major railheads like <strong>Chandigarh</strong> or <strong>Ambala Cantt</strong> offer more frequent train schedules from across India, from where you can grab a direct bus or cab.</li><li><strong>By Road:</strong> Mandi town is well-connected by overnight Volvo buses from Delhi, Chandigarh, and Shimla. Once you reach the main Mandi Bus Stand, you can take a local taxi or catch the regular IIT Mandi institutional shuttle bus directly into the Kamand campus.</li></ul>"
+    },
+    {
+      "id": "sameer_bhaiya_info",
+      "keywords": [
+        "sam",
+        "sameer",
+        "sameer bhaiya",
+        "sam bhaiya",
+        "sam info"
+      ],
+      "response": "Sameer Bhaiya is a beloved figure among the IIT Mandi community, known for his warm personality and dedication to student welfare. He served as the TA of PnS and is often affectionately referred to as 'Sam Bhaiya' by students. He is approachable and always ready to assist students with their concerns, making him a cherished member of the campus community. BUT HE IS PASSING OUT THIS YEAR___SO HEHE<br><br><img src='https://i.pinimg.com/474x/fe/bb/d4/febbd478ad268919fbf80b0b5e069165.jpg' alt='Sameer Bhaiya' style='max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px;'/><br><em>Sam bhaiya doing his work(writing code for grading all of us zero)</em>"
+    },
+    {
+      "id": "village_square_info",
+      "keywords": [
+        "village square",
+        "vsq",
+        "vs",
+        "hangout spots"
+      ],
+      "response": "<strong>The Village Square</strong> (commonly known as <strong>VS</strong>) is the primary commercial and social hub of IIT Mandi's North Campus (Kamand).<br /><br />It houses key student amenities including a well-stocked grocery store, a stationery and printing shop, a pharmacy, and a canteen Bake O Mocha serving meals and snacks.<br/><br/>It serves as a central meeting point for students, faculty, and visitors alike.<br /><br /><img src='https://infra.iitmandi.ac.in/img/guesthouse.jpg' alt='IIT Mandi Village Square Guest House Complex' style='max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px;'/>"
+    }
   ]
 }
