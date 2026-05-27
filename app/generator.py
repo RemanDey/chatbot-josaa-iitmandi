@@ -965,8 +965,8 @@ class RAGGenerator:
         self._groq_fail_count = 0
         self._groq_bypass_until = 0.0
 
-    def _call_google_genai(self, combined_prompt: str) -> str:
-        """Call Gemini model with Search Grounding using Google GenAI SDK, with auto-retry on 429/403."""
+    def _call_google_genai(self, contents: str, system_instruction: Optional[str] = None) -> str:
+        """Call Gemini model using Google GenAI SDK, with optional system instruction, and auto-retry on 429/403."""
         GOOGLE_MODEL = "gemini-2.5-flash"
         
         # Retry up to the number of available keys
@@ -982,10 +982,24 @@ class RAGGenerator:
             
             try:
                 client = genai.Client(api_key=key)
+                
+                # If system_instruction is provided, use it (no web search grounding for synthesis)
+                if system_instruction:
+                    call_config = types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.1,
+                        max_output_tokens=2000,
+                    )
+                else:
+                    call_config = types.GenerateContentConfig(
+                        temperature=0.1,
+                        max_output_tokens=2000,
+                    )
+                
                 response = client.models.generate_content(
                     model=GOOGLE_MODEL,
-                    contents=combined_prompt,
-                    config=config,
+                    contents=contents,
+                    config=call_config,
                 )
                 return response.text or ""
             except Exception as e:
@@ -1038,13 +1052,19 @@ class RAGGenerator:
 
         # 2. Gemini 2.5 Flash (Fallback 1 - High reliability & rate limit)
         try:
-            prompt_parts = []
+            system_instruction = None
+            user_content = ""
             for msg in messages:
-                if msg["role"] in ["system", "user"]:
-                    prompt_parts.append(msg["content"])
-            combined_prompt = "\n\n".join(prompt_parts)
+                if msg["role"] == "system":
+                    system_instruction = msg["content"]
+                elif msg["role"] == "user":
+                    user_content = msg["content"]
             
-            res_text = self._call_google_genai(combined_prompt)
+            if not user_content:
+                user_content = "\n\n".join(msg["content"] for msg in messages if msg["role"] in ["system", "user"])
+                system_instruction = None
+                
+            res_text = self._call_google_genai(user_content, system_instruction)
             if res_text:
                 return res_text.strip()
         except Exception as e:
@@ -1149,9 +1169,13 @@ class RAGGenerator:
         """RAG Claims Extractor: Uses Groq to extract atomic factual claims from local verified documents ONLY."""
         if not confident_chunks:
             return []
-
+            
+        # Ensure chunks are sorted by confidence and limit to top 10 to avoid Groq 413 payload limits
+        sorted_chunks = sorted(confident_chunks, key=lambda x: x.get("confidence_score", 0.0), reverse=True)
+        confident_chunks_limited = sorted_chunks[:10]
+ 
         context_parts = []
-        for i, chunk in enumerate(confident_chunks, 1):
+        for i, chunk in enumerate(confident_chunks_limited, 1):
             source = chunk.get("metadata", {}).get("source", "unknown")
             text = chunk.get("text", "").strip()
             context_parts.append(f"[Document {i} | Source: {source}]:\n{text}")
@@ -1484,7 +1508,9 @@ Documents:
         )
         if skip_rag_llm:
             logger.info("Strong-match branch/program query detected. Bypassing RAG dynamic LLM claim extraction to preserve all raw document details.")
-            rag_claims = self._chunks_to_claims(confident_chunks)
+            # Ensure chunks are sorted and limit to top 12 chunks to avoid token blowup
+            sorted_chunks = sorted(confident_chunks, key=lambda x: x.get("confidence_score", 0.0), reverse=True)
+            rag_claims = self._chunks_to_claims(sorted_chunks[:12])
         else:
             rag_claims = await self.extract_rag_claims(confident_chunks)
             
@@ -1585,11 +1611,11 @@ Documents:
         # ── Step 3: Claim Fusion & Arbitration ────────────────────────────
         fused_claims = fuse_and_arbitrate_claims(all_claims, query_stripped)
         
-        # Token budget constraint: Cap to a maximum of 30 claims to prevent Groq 413 payload too large errors
-        if len(fused_claims) > 30:
-            logger.info("Token Budget: Capping fused claims count from %d to 30.", len(fused_claims))
+        # Token budget constraint: Cap to a maximum of 15 claims to prevent Groq 413 payload too large errors
+        if len(fused_claims) > 15:
+            logger.info("Token Budget: Capping fused claims count from %d to 15.", len(fused_claims))
             fused_claims.sort(key=lambda x: x.get("confidence", 0.5), reverse=True)
-            fused_claims = fused_claims[:30]
+            fused_claims = fused_claims[:15]
         
         # ── Local Fact & Discrepancy Verification ──────────────────────────
         verification_results = self._verify_claims_locally(fused_claims)
@@ -1802,8 +1828,47 @@ Answer:"""
                 })
                 src_idx += 1
 
+        def clean_markdown_formatting(text: str) -> str:
+            # 1. Normalize line endings
+            text = text.replace('\r\n', '\n')
+            
+            # 2. Tighten lists: remove blank lines between list items
+            lines = text.split('\n')
+            cleaned_lines = []
+            in_list = False
+            
+            # Match bullet markers: *, -, + and numbers like 1., 22. followed by space or end of line
+            list_item_pattern = re.compile(r'^\s*([*\-+]|\d+\.)(?:\s+|$)')
+            blank_pattern = re.compile(r'^\s*$')
+            
+            for i, line in enumerate(lines):
+                if list_item_pattern.match(line):
+                    in_list = True
+                    cleaned_lines.append(line)
+                elif blank_pattern.match(line):
+                    next_is_list_item = False
+                    for j in range(i + 1, len(lines)):
+                        next_line = lines[j]
+                        if not blank_pattern.match(next_line):
+                            if list_item_pattern.match(next_line):
+                                next_is_list_item = True
+                            break
+                    
+                    if in_list and next_is_list_item:
+                        continue
+                    else:
+                        cleaned_lines.append(line)
+                else:
+                    in_list = False
+                    cleaned_lines.append(line)
+                    
+            result = '\n'.join(cleaned_lines)
+            result = re.sub(r'\n{3,}', '\n\n', result)
+            return result
+
+        cleaned_answer = clean_markdown_formatting(answer)
         return {
-            "answer": degraded_prefix + answer,
+            "answer": degraded_prefix + cleaned_answer,
             "sources": sources,
             "confidence": float(avg_confidence)
         }
