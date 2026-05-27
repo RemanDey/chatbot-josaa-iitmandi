@@ -707,7 +707,7 @@ class GeminiKeyManager:
             return least_cooldown_key
 
     async def handle_429(self, key_label: str):
-        """Puts a key on jittered cooldown (120s + jitter) and rotates to the next index."""
+        """Puts a key on jittered cooldown of 120 seconds plus jitter and rotates to the next index."""
         async with self._lock:
             now = time.time()
             cooldown_duration = 120.0 + random.randint(0, 30)
@@ -982,7 +982,7 @@ class RAGGenerator:
                     response = client.post(url, json=payload)
                     if response.status_code == 429:
                         available_gemini_key["cooldown_until"] = now + 120.0
-                        logger.warning("Gemini Key %s rate limited (429 status). Putting on cooldown for 120s.", available_gemini_key["label"])
+                        logger.warning("Gemini Key %s rate limited (429 status). Putting on cooldown for 120 seconds.", available_gemini_key["label"])
                         response.raise_for_status()
                     response.raise_for_status()
                     res_data = response.json()
@@ -995,7 +995,7 @@ class RAGGenerator:
             except Exception as e:
                 if hasattr(e, "response") and e.response is not None and e.response.status_code == 429:
                     available_gemini_key["cooldown_until"] = now + 120.0
-                    logger.warning("Gemini Key %s rate limited (HTTPStatusError 429). Putting on cooldown for 120s.", available_gemini_key["label"])
+                    logger.warning("Gemini Key %s rate limited (HTTPStatusError 429). Putting on cooldown for 120 seconds.", available_gemini_key["label"])
                 logger.warning("Gemini synthesis fallback failed: %s. Trying OpenRouter fallback...", e)
         else:
             logger.warning("All Gemini keys on cooldown. Skipping to OpenRouter fallback.")
