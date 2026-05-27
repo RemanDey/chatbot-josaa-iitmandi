@@ -91,10 +91,10 @@ function addMessageToUI(text, isUser = true, usePre = false, extraClass = "") {
     content.className = "message-content";
     if (usePre) {
         const pre = document.createElement("pre");
-        pre.textContent = text;
+        pre.innerHTML = text;
         content.appendChild(pre);
     } else {
-        content.textContent = text;
+        content.innerHTML = text;
     }
 
     messageDiv.appendChild(avatar);
