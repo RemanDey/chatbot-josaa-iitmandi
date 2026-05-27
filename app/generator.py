@@ -657,15 +657,50 @@ class GeminiKeyManager:
     Manages active Gemini API keys with thread-safe threading.Lock,
     instant key rotation on 429, and permanent disabling of leaked/blocked keys.
     """
-    def __init__(self, primary: str, secondary: str, third: str):
+    def __init__(self):
         import threading
+        import os
+        from app.config import settings
+        
         self.keys = []
-        if primary and primary != "your_gemini_api_key_here":
-            self.keys.append({"label": "Primary", "key": primary, "cooldown_until": 0.0, "is_leaked": False})
-        if secondary and secondary != "your_gemini_second_api_key_here":
-            self.keys.append({"label": "Secondary", "key": secondary, "cooldown_until": 0.0, "is_leaked": False})
-        if third and third != "your_gemini_third_api_key_here":
-            self.keys.append({"label": "Third", "key": third, "cooldown_until": 0.0, "is_leaked": False})
+        seen_keys = set()
+        
+        env_vars = [
+            "GEMINI_API_KEY", "GEMINI_SECOND_API_KEY", "GEMINI_THIRD_API_KEY",
+            "GEMINI_FOURTH_API_KEY", "GEMINI_FIFTH_API_KEY",
+            "GEMINI_API_KEY_1", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "GEMINI_API_KEY_4",
+            "GOOGLE_API_KEY", "GOOGLE_API_KEY_1", "GOOGLE_API_KEY_2", "GOOGLE_API_KEY_3",
+            "GOOGLE_API_KEY_4", "GOOGLE_API_KEY_5", "GOOGLE_API_KEY_FALLBACK"
+        ]
+        
+        settings_keys = [
+            getattr(settings, "gemini_api_key", ""),
+            getattr(settings, "gemini_second_api_key", ""),
+            getattr(settings, "gemini_third_api_key", "")
+        ]
+        
+        def add_key(val, label):
+            if not val:
+                return
+            val = val.strip()
+            if any(p in val.lower() for p in ["your_gemini", "your_api", "placeholder", "leaked"]):
+                return
+            if val not in seen_keys:
+                seen_keys.add(val)
+                self.keys.append({
+                    "label": label,
+                    "key": val,
+                    "cooldown_until": 0.0,
+                    "is_leaked": False
+                })
+        
+        for var in env_vars:
+            add_key(os.getenv(var), var)
+            
+        for idx, key in enumerate(settings_keys, 1):
+            add_key(key, f"Settings_Key_{idx}")
+            
+        logger.info("GeminiKeyManager initialized with %d unique API keys.", len(self.keys))
         self._current_idx = 0
         self._lock = threading.Lock()
 
@@ -925,11 +960,7 @@ class RAGGenerator:
         self.hf_model = getattr(settings, "hf_model", "meta-llama/Llama-3.3-70B-Instruct")
         self.hf_api_url = getattr(settings, "hf_api_url", "https://router.huggingface.co/v1/chat/completions")
 
-        self.key_manager = GeminiKeyManager(
-            self.gemini_api_key,
-            self.gemini_second_api_key,
-            self.gemini_third_api_key
-        )
+        self.key_manager = GeminiKeyManager()
         self._cache_lock = asyncio.Lock()
         self._groq_fail_count = 0
         self._groq_bypass_until = 0.0
@@ -1475,7 +1506,8 @@ Documents:
             web_cache = WebCache()
             
             for ent in entities:
-                cached_res = web_cache.get(ent)
+                norm_ent, _ = normalize_entity_category(ent, "general")
+                cached_res = web_cache.get(norm_ent)
                 if cached_res is not None:
                     cache_hits += 1
                     claims = cached_res.get("extracted_claims", [])
@@ -1484,7 +1516,7 @@ Documents:
                             c["origin"] = "web"
                             verify_claim(c)
                             web_claims.append(c)
-                    logger.info("Web cache HIT for entity: '%s' (%d claims)", ent, len(claims))
+                    logger.info("Web cache HIT for entity: '%s' (%d claims)", norm_ent, len(claims))
                 else:
                     entities_to_fetch.append(ent)
                     
@@ -1529,12 +1561,14 @@ Documents:
                                             "confidence": float(c.get("confidence", 0.5)),
                                             "origin": "web"
                                         })
-                                web_cache.set(ent, "", extracted_claims=verified_fresh, entity=ent, query_type=query_info["type"])
+                                norm_ent, _ = normalize_entity_category(ent, "general")
+                                web_cache.set(norm_ent, "", extracted_claims=verified_fresh, entity=norm_ent, query_type=query_info["type"])
                                 for c in verified_fresh:
                                     verify_claim(c)
                                     web_claims.append(c)
                             else:
-                                web_cache.set(ent, "", extracted_claims=[], entity=ent, query_type=query_info["type"])
+                                norm_ent, _ = normalize_entity_category(ent, "general")
+                                web_cache.set(norm_ent, "", extracted_claims=[], entity=norm_ent, query_type=query_info["type"])
                     except asyncio.TimeoutError:
                         logger.error("Gemini web search timed out. Falling back to Degraded Mode.")
                         degraded_mode = True
@@ -1550,6 +1584,12 @@ Documents:
 
         # ── Step 3: Claim Fusion & Arbitration ────────────────────────────
         fused_claims = fuse_and_arbitrate_claims(all_claims, query_stripped)
+        
+        # Token budget constraint: Cap to a maximum of 30 claims to prevent Groq 413 payload too large errors
+        if len(fused_claims) > 30:
+            logger.info("Token Budget: Capping fused claims count from %d to 30.", len(fused_claims))
+            fused_claims.sort(key=lambda x: x.get("confidence", 0.5), reverse=True)
+            fused_claims = fused_claims[:30]
         
         # ── Local Fact & Discrepancy Verification ──────────────────────────
         verification_results = self._verify_claims_locally(fused_claims)
