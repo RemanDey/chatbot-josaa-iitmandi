@@ -36,7 +36,9 @@ NORMALIZATION_MAP = {
 }
 
 def normalize_entity_category(entity: str, category: str) -> tuple[str, str]:
-    """
+    """Normalizes the entity and category to resolve synonyms to the same cache namespace."""
+    ent_lower = entity.lower().strip()
+    
     # Check normalization map and synonyms
     if any(x in ent_lower for x in ["electrical", "ee"]):
         entity_norm = "IIT Mandi EE"
@@ -1630,7 +1632,7 @@ ACADEMIC REALISM & TOUGH SUBJECTS:
 
 MANDATORY INTERPRETATION STRUCTURE:
 - Every single bullet point prefixed with "INTERPRETATION:" in Section 3 and Section 5 MUST explain:
-  1. WHY the statistic or fact matters to the student’s career/decision.
+  1. WHY the statistic or fact matters to the student's career/decision.
   2. WHAT caused the trend (e.g., specific curriculum constraints, local grading curves, or macroeconomic hiring downturns).
   3. HOW it compares to nearby branches (specifically contrasting with CSE, EE, or ME at IIT Mandi).
   4. WHAT tradeoff the student accepts (e.g. high academic load, limited software job access, intense competition for core roles, or relative grading pressure).
