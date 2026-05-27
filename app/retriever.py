@@ -233,7 +233,11 @@ class HybridRetriever:
             
         candidates = self.retrieve(query, top_k=top_k * 2)
         
-        branch_files = ["cse.md", "ee.md", "me.md", "ce.md", "ep.md", "dse.md", "mnc.md"]
+        branch_files = [
+            "cse.md", "ee.md", "me.md", "ce.md", "ep.md", "dse.md", "mnc.md",
+            "vlsi.md", "ge.md", "bioe.md", "bs_chem.md", "imba.md", "agri_da.md",
+            "chem_da.md", "quantum.md", "mse.md"
+        ]
         priority_categories = query_info.get("priority_categories", [])
         entities = query_info.get("entities", [])
         query_type = query_info.get("type", "general")

@@ -71,6 +71,22 @@ def normalize_entity_category(entity: str, category: str) -> tuple[str, str]:
         entity_norm = "IIT Mandi DS"
     elif any(x in ent_lower for x in ["general", "ge"]):
         entity_norm = "IIT Mandi GE"
+    elif any(x in ent_lower for x in ["vlsi", "microelectronics"]):
+        entity_norm = "IIT Mandi VLSI"
+    elif any(x in ent_lower for x in ["bioengineering", "bioe"]):
+        entity_norm = "IIT Mandi BioE"
+    elif any(x in ent_lower for x in ["chemical sciences", "bs chem", "chemical science"]):
+        entity_norm = "IIT Mandi BS Chem"
+    elif any(x in ent_lower for x in ["quantum", "qse"]):
+        entity_norm = "IIT Mandi Quantum"
+    elif any(x in ent_lower for x in ["materials", "mse"]):
+        entity_norm = "IIT Mandi MSE"
+    elif any(x in ent_lower for x in ["integrated mba", "imba"]):
+        entity_norm = "IIT Mandi IMBA"
+    elif any(x in ent_lower for x in ["agricultural", "agri"]):
+        entity_norm = "IIT Mandi Agri"
+    elif any(x in ent_lower for x in ["chemical engineering and data analytics", "chem engg"]):
+        entity_norm = "IIT Mandi Chem"
     else:
         entity_norm = "IIT Mandi"
         
@@ -106,15 +122,34 @@ def decompose_query(query: str) -> List[Dict[str, str]]:
         branches.append("EE")
     if re.search(r"\b(cse|computer science|computer)\b", query_lower):
         branches.append("CSE")
-        
-    # Match ME case-sensitively or using mech/mechanical (exclude lowercase 'me' word)
     if "mechanical" in query_lower or "mech" in query_lower or re.search(r"\bME\b", query):
         branches.append("ME")
-        
     if re.search(r"\bce\b|\bcivil\b", query_lower):
         branches.append("CE")
     if re.search(r"\bds\b|\bdata science\b", query_lower):
         branches.append("DS")
+    if re.search(r"\b(mnc|math|mathematics)\b", query_lower):
+        branches.append("MNC")
+    if re.search(r"\b(ep|physics|engineering physics)\b", query_lower):
+        branches.append("EP")
+    if re.search(r"\bvlsi\b", query_lower):
+        branches.append("VLSI")
+    if re.search(r"\bge\b|\bgeneral engineering\b", query_lower):
+        branches.append("GE")
+    if re.search(r"\b(bioe|bioengineering)\b", query_lower):
+        branches.append("BIOE")
+    if re.search(r"\b(bs chem|chemical sciences)\b", query_lower):
+        branches.append("BS_CHEM")
+    if re.search(r"\b(imba|integrated mba)\b", query_lower):
+        branches.append("IMBA")
+    if re.search(r"\b(agri|agricultural)\b", query_lower):
+        branches.append("AGRI")
+    if re.search(r"\b(chem_da|chemical engineering and data analytics)\b", query_lower):
+        branches.append("CHEM_DA")
+    if re.search(r"\b(quantum|qse)\b", query_lower):
+        branches.append("QUANTUM")
+    if re.search(r"\bmse\b|\bmaterials\b", query_lower):
+        branches.append("MSE")
         
     # Deduplicate branches
     branches = list(dict.fromkeys(branches))
@@ -231,7 +266,16 @@ def classify_query_rich(query: str) -> dict:
         "ce": ["ce", "civil"],
         "ep": ["ep", "physics", "engineering physics"],
         "ds": ["dse", "data science"],
-        "mnc": ["mnc", "math", "mathematics"]
+        "mnc": ["mnc", "math", "mathematics"],
+        "vlsi": ["vlsi", "microelectronics"],
+        "ge": ["general engineering", "ge"],
+        "bioe": ["bioengineering", "bio engineering", "bioe"],
+        "bs_chem": ["chemical sciences", "bs chem", "chemistry"],
+        "imba": ["integrated mba", "imba", "bs mba"],
+        "agri": ["agricultural engineering", "agri"],
+        "chem_da": ["chemical engineering and data analytics", "chem engg + da"],
+        "quantum": ["quantum science", "quantum engineering", "qse"],
+        "mse": ["materials science", "mse"]
     }
     
     for branch, keywords in branch_map.items():
@@ -704,6 +748,39 @@ def get_query_entities(query: str) -> List[str]:
     # DS
     if re.search(r"\bds\b|\bdata science\b", query_lower):
         branches.append("DS")
+    # MnC
+    if re.search(r"\b(mnc|math|mathematics)\b", query_lower):
+        branches.append("MNC")
+    # EP
+    if re.search(r"\b(ep|physics|engineering physics)\b", query_lower):
+        branches.append("EP")
+    # VLSI
+    if re.search(r"\bvlsi\b", query_lower):
+        branches.append("VLSI")
+    # GE
+    if re.search(r"\bge\b|\bgeneral engineering\b", query_lower):
+        branches.append("GE")
+    # BioE
+    if re.search(r"\b(bioe|bioengineering)\b", query_lower):
+        branches.append("BIOE")
+    # BS Chem
+    if re.search(r"\b(bs chem|chemical sciences)\b", query_lower):
+        branches.append("BS_CHEM")
+    # IMBA
+    if re.search(r"\b(imba|integrated mba)\b", query_lower):
+        branches.append("IMBA")
+    # Agri
+    if re.search(r"\b(agri|agricultural)\b", query_lower):
+        branches.append("AGRI")
+    # Chem DA
+    if re.search(r"\b(chem_da|chemical engineering and data analytics)\b", query_lower):
+        branches.append("CHEM_DA")
+    # Quantum
+    if re.search(r"\b(quantum|qse)\b", query_lower):
+        branches.append("QUANTUM")
+    # MSE
+    if re.search(r"\bmse\b|\bmaterials\b", query_lower):
+        branches.append("MSE")
         
     # Deduplicate branches preserving order
     branches = list(dict.fromkeys(branches))
