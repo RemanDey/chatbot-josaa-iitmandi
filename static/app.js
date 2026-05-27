@@ -26,7 +26,72 @@ function loadFromStorage() {
         }
     }
 }
+//voice button
+        const startBtn = document.getElementById('voice-btn');
+        const micIconPath = startBtn.querySelector('svg path');
+        const textbox = document.getElementById('chat-input');
 
+        // 2. SVG path variables for swapping states
+        const MIC_ON_PATH = `M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z`;
+        const MIC_OFF_PATH = `M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.41 1.41c-.64.43-1.39.67-2.06.74V21h2v-3.32c1.24-.18 2.38-.68 3.31-1.39L19.73 21 21 19.73 4.27 3zM12 16.1c-2.8 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.93L14.3 15.5c-.69.38-1.47.6-2.3.6z`;
+
+        // 3. Keep track of status
+        let isListening = false;
+
+        // 4. Set up Web Speech API recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("Speech recognition is not supported in this browser. Try Chrome or Edge.");
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            // 5. Handle button clicks to start/stop
+            startBtn.addEventListener('click', () => {
+                if (!isListening) {
+                    recognition.start();
+                } else {
+                    recognition.stop();
+                }
+            });
+
+            // 6. Native event triggers
+            recognition.onstart = () => {
+                isListening = true;
+                startBtn.classList.add('listening');
+                micIconPath.setAttribute('d', MIC_OFF_PATH); // Switches to mic-slash graphic
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                startBtn.classList.remove('listening');
+                micIconPath.setAttribute('d', MIC_ON_PATH); // Switches back to standard mic graphic
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                
+                // Print streaming speech to the textarea
+                textbox.value = finalTranscript + interimTranscript;
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech Recognition Error: ", event.error);
+                recognition.stop();
+            };
+        }
 // Save to localStorage
 function saveToStorage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
