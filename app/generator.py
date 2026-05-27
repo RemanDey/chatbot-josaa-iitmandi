@@ -1861,6 +1861,24 @@ Answer:"""
                     # Non-list and non-code-block: strip leading spaces to prevent indented code blocks
                     cleaned_lines.append(stripped)
                     
+            # Collapse loose spacing: if there's a blank line between two short lines that don't end with typical sentence punctuation,
+            # it's a loose unbulleted/bulleted list. Collapse the blank line to make it tight!
+            i = 0
+            while i < len(cleaned_lines) - 2:
+                line1 = cleaned_lines[i].strip()
+                line2 = cleaned_lines[i+1].strip()
+                line3 = cleaned_lines[i+2].strip()
+                
+                if line2 == "" and line1 != "" and line3 != "":
+                    # Check if they look like list items (short < 60 chars, no typical sentence ending punctuation)
+                    is_list1 = len(line1) < 65 and not line1.endswith(('.', '?', '!'))
+                    is_list3 = len(line3) < 65 and not line3.endswith(('.', '?', '!'))
+                    
+                    if is_list1 or is_list3 or list_item_pattern.match(cleaned_lines[i]) or list_item_pattern.match(cleaned_lines[i+2]):
+                        cleaned_lines.pop(i+1)
+                        continue
+                i += 1
+
             result = '\n'.join(cleaned_lines)
             result = re.sub(r'\n{3,}', '\n\n', result)
             return result
