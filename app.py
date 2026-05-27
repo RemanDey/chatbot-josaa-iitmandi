@@ -341,7 +341,7 @@ def generate_ai_response(prompt):
     if cached_reply is not None:
         return cached_reply
     #generating hardcodede responses
-    hardcoded_router = hardcoded_responses.SemanticRouter("triggers.json",0.50)
+    hardcoded_router = hardcoded_responses.hardcoded_responses("triggers.json")
     hardcoded_reply, bypassed = hardcoded_router.process_prompt(prompt)
     if bypassed:
         return format_api_response(hardcoded_reply)
