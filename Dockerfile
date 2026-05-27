@@ -23,9 +23,6 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
-# Build the retrieval indexes from the committed raw KB so the repo stays small.
-RUN python -m app.ingest --folder data/raw
-
 RUN useradd --create-home --shell /usr/sbin/nologin appuser \
     && mkdir -p /app/logs /app/data /app/.cache/huggingface /app/.cache/sentence-transformers \
     && chown -R appuser:appuser /app

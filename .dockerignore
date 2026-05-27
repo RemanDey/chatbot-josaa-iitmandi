@@ -11,9 +11,6 @@ __pycache__
 .env.*
 !.env.example
 logs
-data/raw/*
-!data/raw/new/
-!data/raw/new/**
 data/cache.db
 evals/results.json
 .DS_Store

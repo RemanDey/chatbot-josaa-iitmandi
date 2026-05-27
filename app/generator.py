@@ -917,10 +917,57 @@ class RAGGenerator:
         self._groq_fail_count = 0
         self._groq_bypass_until = 0.0
 
-    def _call_llm(self, messages: list) -> Optional[str]:
+    def _call_llm(self, messages: list, prefer_gemini: bool = False) -> Optional[str]:
         """Core LLM call handler with Groq primary and multiple fallbacks (Gemini, OpenRouter, DeepSeek, Nvidia, Hugging Face)."""
-        # 1. Groq (Primary)
         now = time.time()
+        
+        # 0. Preferred Gemini execution (for comparison routing)
+        if prefer_gemini:
+            available_gemini_key = None
+            for k in self.key_manager.keys:
+                if k["cooldown_until"] < now:
+                    available_gemini_key = k
+                    break
+            if available_gemini_key:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={available_gemini_key['key']}"
+                    prompt_parts = []
+                    for msg in messages:
+                        if msg["role"] in ["system", "user"]:
+                            prompt_parts.append(msg["content"])
+                    combined_prompt = "\n\n".join(prompt_parts)
+                    
+                    payload = {
+                        "contents": [{
+                            "parts": [{"text": combined_prompt}]
+                        }],
+                        "generationConfig": {
+                            "temperature": 0.1,
+                            "maxOutputTokens": 1500,
+                            "thinkingConfig": {
+                                "thinkingBudget": 0
+                            }
+                        }
+                    }
+                    with httpx.Client(timeout=15.0) as client:
+                        response = client.post(url, json=payload)
+                        if response.status_code == 429:
+                            available_gemini_key["cooldown_until"] = now + 120.0
+                            response.raise_for_status()
+                        response.raise_for_status()
+                        res_data = response.json()
+                        candidates = res_data.get("candidates", [])
+                        if candidates:
+                            content = candidates[0].get("content", {})
+                            parts = content.get("parts", [])
+                            if parts:
+                                return parts[0].get("text", "").strip()
+                except Exception as e:
+                    if hasattr(e, "response") and e.response is not None and e.response.status_code == 429:
+                        available_gemini_key["cooldown_until"] = now + 120.0
+                    logger.warning("Preferred Gemini synthesis failed: %s. Falling back to primary Groq pipeline.", e)
+
+        # 1. Groq (Primary)
         if self.groq_api_key and self.groq_api_key != "your_groq_api_key_here":
             if now < self._groq_bypass_until:
                 logger.warning("Groq is currently bypassed (under 429 cooldown). Skipping to Gemini fallback.")
@@ -1732,7 +1779,7 @@ Answer:"""
         # Stage Timeout Budget (GROQ_TIMEOUT = 30.0 seconds)
         try:
             answer = await asyncio.wait_for(
-                asyncio.to_thread(self._call_llm, messages),
+                asyncio.to_thread(self._call_llm, messages, prefer_gemini=(query_class == "comparison_query")),
                 timeout=55.0
             )
         except asyncio.TimeoutError:
@@ -1770,19 +1817,31 @@ Answer:"""
             # 1. Normalize line endings
             text = text.replace('\r\n', '\n')
             
-            # 2. Tighten lists: remove blank lines between list items
             lines = text.split('\n')
             cleaned_lines = []
             in_list = False
+            in_code_block = False
             
             # Match bullet markers: *, -, + and numbers like 1., 22. followed by space or end of line
             list_item_pattern = re.compile(r'^\s*([*\-+]|\d+\.)(?:\s+|$)')
             blank_pattern = re.compile(r'^\s*$')
             
             for i, line in enumerate(lines):
+                stripped = line.strip()
+                
+                # Check for fenced code blocks
+                if stripped.startswith("```"):
+                    in_code_block = not in_code_block
+                    cleaned_lines.append(line)
+                    continue
+                
+                if in_code_block:
+                    cleaned_lines.append(line)
+                    continue
+                
                 if list_item_pattern.match(line):
                     in_list = True
-                    cleaned_lines.append(line)
+                    cleaned_lines.append(line.rstrip())
                 elif blank_pattern.match(line):
                     next_is_list_item = False
                     for j in range(i + 1, len(lines)):
@@ -1795,10 +1854,11 @@ Answer:"""
                     if in_list and next_is_list_item:
                         continue
                     else:
-                        cleaned_lines.append(line)
+                        cleaned_lines.append("")
                 else:
                     in_list = False
-                    cleaned_lines.append(line)
+                    # Non-list and non-code-block: strip leading spaces to prevent indented code blocks
+                    cleaned_lines.append(stripped)
                     
             result = '\n'.join(cleaned_lines)
             result = re.sub(r'\n{3,}', '\n\n', result)
