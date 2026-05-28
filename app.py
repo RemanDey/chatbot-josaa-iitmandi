@@ -3,6 +3,7 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from typing import Callable
+from wsgiref import headers
 
 from cache import get_cached, set_cached
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
@@ -384,6 +385,19 @@ def format_api_response(raw_response):
 def _call_aryan_rag(prompt):
     # Aryan's RAG backend supplies JoSAA-specific context; Gemini then blends it
     # with search-grounded reasoning into one answer instead of competing replies.
+    
+    url = 'https://aryanraj1092-iitmandi-bot.hf.space/api/chat'
+    headers = {
+    'accept': 'application/json',
+    'Authorization': 'Bearer iitmandiaxyz@1092',
+    'Content-Type': 'application/json'
+    }
+    data = {
+    "query": prompt,
+    "history": []
+    }
+
+    response = requests.post(url, headers=headers, json=data)
     response = requests.post(
         AI_BACKEND_URL,
         json={"query": prompt},
@@ -410,7 +424,7 @@ def _build_combined_prompt(prompt):
             "Create one combined JoSAAssist answer. Use Aryan RAG as grounded "
             "admissions context, use Google Search when fresher official IIT "
             "Mandi or JoSAA information is needed, resolve conflicts clearly, "
-            "and keep the response concise and pointwise."
+            "and keep the response concise and pointwise. and say i dont know if you are not sure about it."
         )
     return combined_prompt if rag_answer else prompt
 
