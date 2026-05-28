@@ -351,7 +351,7 @@ def generate_ai_response(prompt):
 
     # response = requests.post(AI_BACKEND_URL, json=payload)
     # processessed_reply = format_ai_response(response)
-    raw_reply =generate_api_response(prompt)
+    raw_reply =_call_aryan_rag(prompt)#generate_api_response(prompt)
     processessed_reply = format_api_response(raw_reply)
     # Avoid caching transient upstream failures, otherwise a single timeout could
     # serve the same apology for a common question for the full one-hour TTL.

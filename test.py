@@ -7,7 +7,7 @@ headers = {
     'Content-Type': 'application/json'
 }
 data = {
-    "query": "my rank is 3000 in jee advanced. what branch can i get in iit mandi?",
+    "query": "is iitmandi cse better than iit bombay aerospace?",
     "history": []
 }
 
