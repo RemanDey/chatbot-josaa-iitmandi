@@ -328,6 +328,8 @@ def generate_ai_response(prompt):
         return "Reman Loves To Solve PS:)hehe"
     if " hi " in prompt.lower() or " hello " in prompt.lower():
         return "Hello! I'm JoSAAssist, your IIT Mandi admissions assistant. How can I help you today?"
+    if "aryan raj" in prompt.lower():
+        return "Aryan Raj is a 2nd Year Electrical Engineering student at IIT Mandi."
     if " reman " in prompt.lower() or prompt.lower().startswith("reman") or prompt.lower().endswith("reman"):
         return (
             "Reman Dey, a 2nd Year Engineering Physics student at IIT Mandi, made this bot frontend and the Whatsapp and Telegram integrations."
@@ -420,6 +422,18 @@ def _build_combined_prompt(prompt):
             "admissions context, use Google Search when fresher official IIT "
             "Mandi or JoSAA information is needed, resolve conflicts clearly, "
             "and keep the response concise and pointwise. and say i dont know if you are not sure about it."
+            '''
+            You must output all text formatting using clean, valid HTML tags instead of Markdown. 
+            Only use the following structural and inline tags:
+            - Bold/Emphasis: <strong>text</strong> or <em>text</em>
+            - Headings: DO NOT USE HEADING TAGS. Instead, use <strong> or <em> for emphasis and structure.
+            - Lists: <ul>, <ol>, and <li> for bullet or numbered points
+            - Linebreaks
+            - Separation: <hr /> for horizontal rules
+            - Paragraphs: Wrap text block segments in <p>text</p> and use <br /> for single line breaks
+            - Tables: Use <table>, <tr>, <th>, and <td> for structured grid data
+            Do not use Markdown block quotes or symbols like **, ###, or - for bullets. Return raw HTML text directly.
+            '''
         )
     return combined_prompt if rag_answer else prompt
 
