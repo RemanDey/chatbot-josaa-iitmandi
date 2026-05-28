@@ -123,7 +123,7 @@ limiter = Limiter(
 # Cap concurrent Gemini waits so slow upstream calls cannot exhaust the gevent
 # worker indefinitely; requests get a graceful fallback after 30 seconds.
 GENAI_TIMEOUT_SECONDS = 30
-RAG_TIMEOUT_SECONDS = 15
+RAG_TIMEOUT_SECONDS = 40
 CHAT_COMPLETIONS_TIMEOUT_SECONDS = 20
 GENAI_TIMEOUT_REPLY = "I'm taking too long to respond right now. Please try again in a moment."
 GENAI_ERROR_REPLY = "Something went wrong. Please try again."
@@ -398,11 +398,6 @@ def _call_aryan_rag(prompt):
     }
 
     response = requests.post(url, headers=headers, json=data)
-    response = requests.post(
-        AI_BACKEND_URL,
-        json={"query": prompt},
-        timeout=RAG_TIMEOUT_SECONDS,
-    )
     response.raise_for_status()
     return format_ai_response(response)
 
