@@ -329,7 +329,7 @@ def generate_ai_response(prompt):
     if " hi " in prompt.lower() or " hello " in prompt.lower():
         return "Hello! I'm JoSAAssist, your IIT Mandi admissions assistant. How can I help you today?"
     if "aryan raj" in prompt.lower():
-        return "Aryan Raj is a 2nd Year Electrical Engineering student at IIT Mandi."
+        return "Aryan Raj is a student at Indian Institute of Technology Mandi who builds AI, backend, and software systems focused on solving practical problems. He has worked on projects including an AI-powered hotel emergency response system, a scam detection and honeypot platform, a story consistency checker, and an off-road terrain classification system using computer vision. His work mainly involves Python, FastAPI, Flutter, Firebase, and modern AI models, with experience in building real-time APIs, automation pipelines, and deployment systems. Visit his <a href='https://github.com/Aryan1092raj'>github</a> and <a href='https://www.linkedin.com/in/aryan-raj-iitmd'>linkedin</a>"
     if " reman " in prompt.lower() or prompt.lower().startswith("reman") or prompt.lower().endswith("reman"):
         return (
             "Reman Dey, a 2nd Year Engineering Physics student at IIT Mandi, made this bot frontend and the Whatsapp and Telegram integrations."
