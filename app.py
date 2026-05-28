@@ -416,9 +416,9 @@ def _build_combined_prompt(prompt):
         combined_prompt = (
             "User question:\n"
             f"{prompt}\n\n"
-            "Aryan RAG answer/context:\n"
+            "Uploaded Documents answer/context:\n"
             f"{rag_answer}\n\n"
-            "Create one combined JoSAAssist answer. Use Aryan RAG as grounded "
+            "Create one combined JoSAAssist answer. Use Uploaded Documents as grounded "
             "admissions context, use Google Search when fresher official IIT "
             "Mandi or JoSAA information is needed, resolve conflicts clearly, "
             "and keep the response concise and pointwise. and say i dont know if you are not sure about it."
