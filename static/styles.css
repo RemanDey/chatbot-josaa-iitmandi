@@ -460,7 +460,6 @@ body {
 }
 
 .chat-messages {
-    white-space: pre-wrap;
     flex: 1;
     overflow-y: auto;
     padding: 20px;
@@ -542,6 +541,34 @@ body {
     background: #2d2d2d;
     color: #e0e0e0;
     border-radius: 4px 24px 24px 24px;
+}
+
+/* Tighten default browser margins for HTML rendered inside bot replies */
+.message.assistant .message-content p,
+.message.assistant .message-content ul,
+.message.assistant .message-content ol {
+    margin: 4px 0;
+}
+
+.message.assistant .message-content li {
+    margin: 2px 0;
+}
+
+.message.assistant .message-content ul,
+.message.assistant .message-content ol {
+    padding-left: 20px;
+}
+
+.message.assistant .message-content p:first-child,
+.message.assistant .message-content ul:first-child,
+.message.assistant .message-content ol:first-child {
+    margin-top: 0;
+}
+
+.message.assistant .message-content p:last-child,
+.message.assistant .message-content ul:last-child,
+.message.assistant .message-content ol:last-child {
+    margin-bottom: 0;
 }
 
 .message.assistant.terminal .message-content {
